@@ -26,7 +26,7 @@ def extract_python_type(column : ColumnLike) -> tuple[type, bool]:
         (int, False)
     """
     sql_type = type(column.type)
-    return TYPE_MAP.get(sql_type, Any)
+    return TYPE_MAP.get(sql_type, (Any, False)), False
     
 def extract_column_metadata(column : ColumnLike) -> dict[str, Any]:
     """
