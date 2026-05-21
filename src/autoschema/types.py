@@ -25,6 +25,11 @@ def extract_python_type(column : ColumnLike) -> tuple[type, bool]:
         >>> extract_python_type(Integer()) 
         (int, False)
     """
+    # If passed a TypeEngine directly (like Integer()), use it as-is
+    if isinstance(column, sa_types.TypeEngine):
+        sql_type = type(column)
+        return TYPE_MAP.get(sql_type, (Any, False)), False
+    
     sql_type = type(column.type)
     return TYPE_MAP.get(sql_type, (Any, False)), False
     
