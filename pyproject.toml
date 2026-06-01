@@ -31,10 +31,7 @@ dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
 ]
-example = [
-    "fastapi>=0.136.3",
-    "uvicorn>=0.23.0",
-]
+docs = ["zensical"]
 
 [project.urls]
 Homepage = "https://github.com/emiliano-gandini-outeda/schemap"
