@@ -7,6 +7,7 @@ from schemap.builder import build_schema
 from schemap.types import extract_python_type, extract_column_metadata
 from schemap.utils.likeness import ColumnLike
 from schemap.config import SchemaConfig
+from schemap.mixins import TimestampMixin, SoftDeleteMixin
 
 __all__ = [
     "AutoBase",
@@ -16,4 +17,6 @@ __all__ = [
     "extract_column_metadata",
     "ColumnLike",
     "SchemaConfig",
+    "TimestampMixin",
+    "SoftDeleteMixin",
 ]
