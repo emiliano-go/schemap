@@ -1,6 +1,6 @@
 [project]
 name = "schemap"
-version = "0.5.0"
+version = "0.5.2"
 description = "Automatic Pydantic Schemas for SQLAlchemy models"
 readme = "README.md"
 requires-python = ">=3.12.7"
