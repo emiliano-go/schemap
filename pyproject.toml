@@ -34,9 +34,9 @@ dev = [
 docs = ["zensical"]
 
 [project.urls]
-Homepage = "https://github.com/emiliano-gandini-outeda/schemap"
-Repository = "https://github.com/emiliano-gandini-outeda/schemap"
-Issues = "https://github.com/emiliano-gandini-outeda/schemap/issues"
+Homepage = "https://github.com/emiliano-go/schemap"
+Repository = "https://github.com/emiliano-go/schemap"
+Issues = "https://github.com/emiliano-go/schemap/issues"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]

@@ -45,7 +45,7 @@ toggle.name = "Switch to light mode"
 
 [[project.extra.social]]
 icon = "fontawesome/brands/github"
-link = "https://github.com/emiliano-gandini-outeda/schemap"
+link = "https://github.com/emiliano-go/schemap"
 name = "schemap on GitHub"
 
 [[project.extra.social]]
