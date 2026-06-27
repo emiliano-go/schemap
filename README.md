@@ -13,7 +13,7 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-10AC84?style=for-the-badge" alt="License">
   </a>
-  <a href="https://deepwiki.com/emiliano-gandini-outeda/schemap/">
+  <a href="https://deepwiki.com/emiliano-go/schemap/">
     <img src="https://img.shields.io/badge/DeepWiki-8A2BE2?logo=readthedocs&logoColor=white&style=for-the-badge" alt="DeepWiki">
   </a>
 </p>

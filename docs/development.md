@@ -3,7 +3,7 @@
 ## Setup
 
 ```bash
-git clone https://github.com/emiliano-gandini-outeda/schemap
+git clone https://github.com/emiliano-go/schemap
 cd schemap
 uv venv
 uv sync

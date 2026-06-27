@@ -1,7 +1,7 @@
 [project]
 site_name = "schemap"
 site_description = "Automatic Pydantic schemas from SQLAlchemy models"
-site_url = "https://emiliano-gandini-outeda.me/schemap/"
+site_url = "https://schemap.emiliano-go.com/"
 docs_dir = "docs"
 site_dir = "site"
 
