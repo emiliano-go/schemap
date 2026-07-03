@@ -31,7 +31,7 @@ dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
 ]
-docs = ["zensical"]
+docs = ["seoslug>=2.0.1", "zensical"]
 
 [project.urls]
 Homepage = "https://github.com/emiliano-go/schemap"
