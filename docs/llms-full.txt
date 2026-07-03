@@ -1,0 +1,698 @@
+# schemap Documentation
+> Full documentation for schemap — Automatic Pydantic schemas from SQLAlchemy models
+> Source: https://emiliano-gandini-outeda.me/schemap
+> Pages: 6
+
+========================================================================
+PAGE: https://emiliano-gandini-outeda.me/schemap/api/
+========================================================================
+
+# API Reference
+
+## Public imports
+
+```python
+from schemap import (
+    auto_schema,
+    AutoBase,
+    SchemaMixin,
+    SchemaConfig,
+    ArchivableMixin,
+    CreatedByMixin,
+    IntPrimaryKeyMixin,
+    SoftDeleteMixin,
+    StatusMixin,
+    TimestampMixin,
+    UUIDPrimaryKeyMixin,
+    UpdatedByMixin,
+    VersionMixin,
+)
+from schemap import build_schema
+```
+
+## AutoBase
+
+Ready-to-use declarative base with auto-generated schemas.
+
+```python
+class AutoBase(SchemaMixin, DeclarativeBase)
+```
+
+## SchemaMixin
+
+Mixin that adds four schema class properties and two conversion methods.
+
+**Class properties:**
+
+- `Schema` -- Full schema with all columns.
+- `CreateSchema` -- Excludes PKs, server_defaults, defaults.
+- `UpdateSchema` -- All fields Optional with None default.
+- `PublicSchema` -- Excludes `__`-prefixed columns.
+
+Schemas are cached per class via `cached_classproperty`.
+
+**Methods:**
+
+- `from_schema(cls, schema_obj)` -- Create ORM instance from Pydantic schema. Uses `model_dump(exclude_none=True)`.
+- `to_schema(self, schema_cls=None)` -- Convert ORM instance to schema. Defaults to `.Schema`.
+
+**Configuration:**
+
+Set `__schema_config__ = SchemaConfig(...)` on any model class to customize its schemas.
+
+## auto_schema
+
+Decorator that attaches generated schemas to any SQLAlchemy model without changing its base class.
+
+```python
+def auto_schema(
+    cls: type[T] | None = None,
+    *,
+    config: SchemaConfig | None = None,
+) -> type[T]
+```
+
+**Usage:**
+
+```python
+from schemap import auto_schema, SchemaConfig
+
+# Bare decorator — all defaults
+@auto_schema
+class User(Base):
+    __tablename__ = "users"
+    ...
+
+# With config
+@auto_schema(config=SchemaConfig(exclude_public=["email"]))
+class User(Base):
+    ...
+```
+
+Attaches `.Schema`, `.CreateSchema`, `.UpdateSchema`, `.PublicSchema`, `.from_schema()`, and `.to_schema()` to the decorated class. Works with any `DeclarativeBase` subclass. All three approaches (`AutoBase`, `SchemaMixin`, `@auto_schema`) produce identical schemas.
+
+**Schema types:** `"full"` (all columns), `"create"` (excludes PKs and defaults), `"update"` (all optional), `"public"` (excludes `__`-prefixed columns).
+
+## SchemaConfig
+
+Dataclass for per-model schema customization. All fields are optional.
+
+- `exclude_always: list[str] = []`
+- `exclude_create: list[str] = []`
+- `exclude_update: list[str] = []`
+- `exclude_public: list[str] = []`
+- `field_overrides: dict[str, Any] = {}`
+- `required_always: list[str] = []`
+- `optional_always: list[str] = []`
+- `extra_validators: dict[str, Callable] = {}`
+
+## build_schema
+
+```python
+def build_schema(
+    model: type[DeclarativeBase],
+    schema_type: str = "default",
+    config: SchemaConfig | None = None,
+) -> type[BaseModel]
+```
+
+Build a Pydantic schema class for any SQLAlchemy model without using `AutoBase`.
+
+**schema_type values:** `"default"`, `"full"`, `"create"`, `"update"`, `"public"`.
+
+```python
+from schemap import build_schema, SchemaConfig
+
+UserSchema = build_schema(User, "default")
+UserCreateSchema = build_schema(User, "create", config=SchemaConfig(exclude_create=["internal_id"]))
+```
+
+## Type mapping
+
+| SQLAlchemy type | Python type |
+|---|---|
+| `Integer`, `SmallInteger`, `BigInteger` | `int` |
+| `Float`, `REAL` | `float` |
+| `Numeric`, `DECIMAL` | `Decimal` |
+| `String`, `Text`, `Unicode`, `CHAR`, `VARCHAR` | `str` |
+| `Boolean` | `bool` |
+| `DateTime`, `TIMESTAMP` | `datetime` |
+| `Date` | `date` |
+| `Time` | `time` |
+| `LargeBinary`, `BLOB` | `bytes` |
+| `JSON` | `dict` |
+| `UUID` | `uuid.UUID` |
+| `ARRAY` | `list` |
+
+========================================================================
+PAGE: https://emiliano-gandini-outeda.me/schemap/development/
+========================================================================
+
+# Development
+
+## Setup
+
+```bash
+git clone https://github.com/emiliano-go/schemap
+cd schemap
+uv venv
+uv sync
+```
+
+## Running tests
+
+```bash
+uv run pytest
+```
+
+Tests use SQLite in-memory databases. No external database needed.
+
+## Building docs
+
+```bash
+pip install zensical
+zensical build --clean
+```
+
+Output goes to `site/`. Add `site/` to your `.gitignore`.
+
+## Project structure
+
+```
+src/schemap/
+├── __init__.py    # Public API exports
+├── base.py        # AutoBase, SchemaMixin
+├── builder.py     # build_schema()
+├── config.py      # SchemaConfig dataclass
+├── decorator.py   # @auto_schema decorator
+├── methods.py     # from_schema / to_schema helpers
+├── types.py       # Type extraction utilities
+├── mixins/        # Built-in reusable mixins
+└── utils/         # Internal utilities
+```
+
+## Contributing
+
+- Open an issue for bugs or feature requests.
+- Pull requests should include tests.
+- Run `ruff check src/` before committing.
+
+========================================================================
+PAGE: https://emiliano-gandini-outeda.me/schemap/examples/
+========================================================================
+
+# Examples
+
+## FastAPI CRUD
+
+```python
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Mapped, mapped_column, Session
+from schemap import AutoBase
+
+app = FastAPI()
+engine = create_engine("sqlite:///./db.sqlite3")
+
+class User(AutoBase):
+    __tablename__ = "users"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    email: Mapped[str]
+
+AutoBase.metadata.create_all(engine)
+
+def get_session():
+    with Session(engine) as session:
+        yield session
+
+@app.post("/users")
+def create_user(data: User.CreateSchema, session: Session = Depends(get_session)):
+    user = User.from_schema(data)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user.to_schema()
+
+@app.get("/users/{user_id}")
+def get_user(user_id: int, session: Session = Depends(get_session)):
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404)
+    return user.to_schema(User.PublicSchema)
+
+@app.patch("/users/{user_id}")
+def update_user(user_id: int, data: User.UpdateSchema, session: Session = Depends(get_session)):
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404)
+    for key, value in data.model_dump(exclude_none=True).items():
+        setattr(user, key, value)
+    session.commit()
+    session.refresh(user)
+    return user.to_schema()
+```
+
+The decorator approach works the same way in FastAPI. Just swap `AutoBase` for `@auto_schema`:
+
+```python
+from schemap import auto_schema
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+@auto_schema
+class User(Base):
+    __tablename__ = "users"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    email: Mapped[str]
+
+Base.metadata.create_all(engine)
+
+# Same CRUD code — User.Schema, User.CreateSchema etc. all exist
+```
+
+Hide sensitive fields from API responses with `exclude_public`:
+
+```python
+from schemap import SchemaConfig
+
+class User(AutoBase):
+    __tablename__ = "users"
+    __schema_config__ = SchemaConfig(exclude_public=["email", "phone"])
+    ...
+```
+
+## Custom validators
+
+```python
+from schemap import AutoBase, SchemaConfig
+
+def must_be_positive(v: float) -> float:
+    if v <= 0:
+        raise ValueError("Must be positive")
+    return v
+
+class Product(AutoBase):
+    __tablename__ = "products"
+    __schema_config__ = SchemaConfig(
+        extra_validators={"price": must_be_positive}
+    )
+    id: Mapped[int] = mapped_column(primary_key=True)
+    price: Mapped[float]
+
+p = Product.CreateSchema(price=10.5)  # OK
+# Product.CreateSchema(price=-5.0)    # Raises pydantic.ValidationError
+```
+
+## Inheritance patterns
+
+### Single-table inheritance
+
+```python
+class Animal(AutoBase):
+    __tablename__ = "animals"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    type: Mapped[str]
+    name: Mapped[str]
+    __mapper_args__ = {"polymorphic_on": type}
+
+class Dog(Animal):
+    __mapper_args__ = {"polymorphic_identity": "dog"}
+    breed: Mapped[str] = mapped_column(nullable=True)
+
+class Cat(Animal):
+    __mapper_args__ = {"polymorphic_identity": "cat"}
+    color: Mapped[str] = mapped_column(nullable=True)
+```
+
+Each subclass gets its own set of four schemas with its own columns.
+
+### Custom base class
+
+```python
+from schemap import SchemaMixin
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(SchemaMixin, DeclarativeBase):
+    __abstract__ = True
+    id: Mapped[int] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc)
+    )
+
+class User(Base):
+    __tablename__ = "users"
+    name: Mapped[str]
+```
+
+========================================================================
+PAGE: https://emiliano-gandini-outeda.me/schemap/
+========================================================================
+
+# schemap
+
+Automatic Pydantic v2 schemas from SQLAlchemy 2.0 ORM models. Define your model once. Four schemas come for free.
+
+## Install
+
+```bash
+pip install schemap
+```
+
+## Quick start
+
+Schemap gives you three approaches — `AutoBase`, `SchemaMixin`, or `@auto_schema`. They all produce identical schemas.
+
+**AutoBase** — inherit from the ready-made base:
+
+```python
+from schemap import AutoBase
+from sqlalchemy.orm import Mapped, mapped_column
+
+class User(AutoBase):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    email: Mapped[str]
+```
+
+**@auto_schema** — decorate any existing model:
+
+```python
+from schemap import auto_schema
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+@auto_schema
+class User(Base):
+    __tablename__ = "users"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    email: Mapped[str]
+```
+
+Both give you the same four schemas:
+
+```python
+User.Schema         # Full schema, all columns
+User.CreateSchema   # Excludes PKs, defaults (for inserts)
+User.UpdateSchema   # All fields optional (for partial updates)
+User.PublicSchema   # Excludes sensitive fields
+```
+
+## What you get
+
+- One model definition, four schemas generated automatically.
+- Three approaches: `AutoBase`, `SchemaMixin`, or `@auto_schema` decorator.
+- SchemaConfig for field exclusion, type overrides, and custom validators.
+- Timestamp, soft delete, audit, and versioning mixins included.
+
+========================================================================
+PAGE: https://emiliano-gandini-outeda.me/schemap/mixins/
+========================================================================
+
+# Mixins
+
+Schemap ships with nine reusable mixins for common patterns.
+
+## TimestampMixin
+
+Adds `created_at` and `updated_at` with auto-populating defaults.
+
+```python
+from schemap import TimestampMixin, AutoBase
+
+class Post(AutoBase, TimestampMixin):
+    __tablename__ = "posts"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str]
+```
+
+Both columns use `default=lambda: datetime.now(timezone.utc)`. `updated_at` also uses `onupdate` to refresh on every write. Both are excluded from `CreateSchema` (they have client defaults).
+
+## SoftDeleteMixin
+
+Adds `deleted_at` timestamp, `soft_delete()`, and `active()` filter.
+
+```python
+from schemap import SoftDeleteMixin, AutoBase
+
+class Article(AutoBase, SoftDeleteMixin):
+    __tablename__ = "articles"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str]
+
+article.soft_delete()
+# article.deleted_at is now set
+
+# Query for undeleted records
+from sqlalchemy import select
+results = session.execute(
+    select(Article).where(Article.active())
+).scalars().all()
+```
+
+## CreatedByMixin and UpdatedByMixin
+
+Audit trail mixins with foreign keys and relationships to `users`.
+
+```python
+from schemap import CreatedByMixin, UpdatedByMixin, AutoBase
+
+class Document(AutoBase, CreatedByMixin, UpdatedByMixin):
+    __tablename__ = "documents"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    content: Mapped[str]
+```
+
+`CreatedByMixin` adds `created_by_id` (FK) and `created_by` (relationship). `UpdatedByMixin` adds `updated_by_id` and `updated_by`. Use separately or together.
+
+## StatusMixin
+
+Adds `status` column with `activate()` and `deactivate()` methods.
+
+```python
+from schemap import StatusMixin, AutoBase
+
+class Subscription(AutoBase, StatusMixin):
+    __tablename__ = "subscriptions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    plan: Mapped[str]
+
+sub.activate()   # status = "active"
+sub.deactivate() # status = "inactive"
+```
+
+Default status is `"active"`.
+
+## ArchivableMixin
+
+Adds `archived_at` timestamp with `archive()` and `restore()` methods.
+
+```python
+from schemap import ArchivableMixin, AutoBase
+
+class Order(AutoBase, ArchivableMixin):
+    __tablename__ = "orders"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    total: Mapped[float]
+
+order.archive()   # archived_at is set
+order.restore()   # archived_at is None
+```
+
+## VersionMixin
+
+Adds `version: int` column for optimistic locking.
+
+```python
+from schemap import VersionMixin, AutoBase
+
+class Product(AutoBase, VersionMixin):
+    __tablename__ = "products"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    price: Mapped[float]
+
+product.increment_version()
+```
+
+## UUIDPrimaryKeyMixin and IntPrimaryKeyMixin
+
+Standard primary key columns.
+
+```python
+from schemap import UUIDPrimaryKeyMixin, IntPrimaryKeyMixin, AutoBase
+
+class Tenant(AutoBase, UUIDPrimaryKeyMixin):
+    __tablename__ = "tenants"
+    name: Mapped[str]
+
+class Tag(AutoBase, IntPrimaryKeyMixin):
+    __tablename__ = "tags"
+    name: Mapped[str]
+```
+
+`UUIDPrimaryKeyMixin` uses `default=uuid4`. `IntPrimaryKeyMixin` provides a bare `int` PK.
+
+## Writing your own mixin
+
+A mixin is a plain class with `Mapped` columns. No base class needed.
+
+```python
+from sqlalchemy.orm import Mapped, mapped_column
+
+class AuditMixin:
+    created_by: Mapped[str] = mapped_column(nullable=False)
+    updated_by: Mapped[str] = mapped_column(nullable=True)
+
+class Document(AutoBase, AuditMixin):
+    __tablename__ = "documents"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    content: Mapped[str]
+```
+
+Guidelines:
+- Column names must not collide between mixins or with the model.
+- Do not define `__tablename__` in a mixin.
+- Use `Optional` or `| None` for nullable columns.
+- Add methods for domain logic (activate, archive, soft_delete, etc.).
+
+========================================================================
+PAGE: https://emiliano-gandini-outeda.me/schemap/tutorial/
+========================================================================
+
+# Tutorial
+
+## Defining a model
+
+Schemap supports three approaches. All three produce identical schemas. Pick the one that fits your project.
+
+**AutoBase** — inherit from the ready-made declarative base:
+
+```python
+from schemap import AutoBase
+from sqlalchemy.orm import Mapped, mapped_column
+
+class Product(AutoBase):
+    __tablename__ = "products"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str]
+    price: Mapped[float] = mapped_column(nullable=True)
+```
+
+**SchemaMixin** — use with an existing custom declarative base:
+
+```python
+from schemap import SchemaMixin
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(SchemaMixin, DeclarativeBase):
+    pass
+
+class Product(Base):
+    __tablename__ = "products"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str]
+```
+
+**@auto_schema** — decorate any model without changing its base class:
+
+```python
+from schemap import auto_schema
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(DeclarativeBase):
+    pass
+
+@auto_schema
+class Product(Base):
+    __tablename__ = "products"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str]
+
+# With configuration
+@auto_schema(config=SchemaConfig(exclude_public=["price"]))
+class Product(Base):
+    ...
+```
+
+## State of .gitignore
+
+Make sure `.gitignore` excludes `site/` (the zensical build output) alongside the usual Python entries:
+
+```
+site/
+__pycache__/
+*.pyc
+```
+
+## Schema variants
+
+| Variant | What it excludes |
+|---|---|
+| `.Schema` | Nothing |
+| `.CreateSchema` | Primary keys, server_defaults, client defaults |
+| `.UpdateSchema` | Primary keys (all fields become Optional with None) |
+| `.PublicSchema` | Columns starting with `__` |
+
+## Converting between ORM and schemas
+
+```python
+# ORM instance to schema
+user = User(id=1, name="Alice")
+schema = user.to_schema()
+schema = user.to_schema(User.PublicSchema)  # Specific variant
+
+# Schema to ORM instance
+data = User.CreateSchema(name="Bob")
+user = User.from_schema(data)
+```
+
+## Customizing schemas
+
+Attach `SchemaConfig` to any model with `__schema_config__`:
+
+```python
+from schemap import AutoBase, SchemaConfig
+
+class User(AutoBase):
+    __tablename__ = "users"
+    __schema_config__ = SchemaConfig(
+        exclude_public=["email", "phone"],
+    )
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    email: Mapped[str]
+    phone: Mapped[str]
+```
+
+### SchemaConfig options
+
+- `exclude_always: list[str]` -- Excluded from all schemas.
+- `exclude_create: list[str]` -- Excluded from CreateSchema only.
+- `exclude_update: list[str]` -- Excluded from UpdateSchema only.
+- `exclude_public: list[str]` -- Excluded from PublicSchema only.
+- `field_overrides: dict[str, Any]` -- Override a field's Python type.
+- `required_always: list[str]` -- Force fields to be required.
+- `optional_always: list[str]` -- Force fields to be optional.
+- `extra_validators: dict[str, Callable]` -- Custom validators per field.
+
+### Custom validators
+
+```python
+def must_be_positive(v: float) -> float:
+    if v <= 0:
+        raise ValueError("Must be positive")
+    return v
+
+SchemaConfig(extra_validators={"price": must_be_positive})
+```
+
+Invalid values raise `pydantic.ValidationError`.
