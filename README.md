@@ -16,6 +16,9 @@
   <a href="https://deepwiki.com/emiliano-go/schemap/">
     <img src="https://img.shields.io/badge/DeepWiki-8A2BE2?logo=readthedocs&logoColor=white&style=for-the-badge" alt="DeepWiki">
   </a>
+  <a href="https://pypi.org/project/schemap/">
+    <img src="https://img.shields.io/pypi/v/schemap?logo=pypi&logoColor=white&style=for-the-badge" alt="PyPI">
+  </a>
 </p>
 
 ```bash
