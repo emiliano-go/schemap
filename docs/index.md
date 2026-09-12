@@ -56,5 +56,8 @@ User.PublicSchema   # Excludes sensitive fields
 
 - One model definition, four schemas generated automatically.
 - Three approaches: `AutoBase`, `SchemaMixin`, or `@auto_schema` decorator.
-- SchemaConfig for field exclusion, type overrides, and custom validators.
-- Timestamp, soft delete, audit, and versioning mixins included.
+- `SchemaConfig` for field exclusion, type overrides, and custom validators.
+- `SchemaType` enum for type-safe schema variant selection.
+- `Status` enum for status fields with `StatusMixin`.
+- Timestamp, soft delete, audit, status, archivable, and versioning mixins included.
+- PEP 561 `py.typed` marker for full IDE and type checker support.
