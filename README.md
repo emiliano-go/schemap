@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://www.python.org/downloads/">
-    <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white&style=for-the-badge" alt="Python">
+    <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white&style=for-the-badge" alt="Python">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-10AC84?style=for-the-badge" alt="License">
@@ -31,11 +31,25 @@ Writing Pydantic schemas for SQLAlchemy models is repetitive work. You maintain 
 
 The library reads your SQLAlchemy columns and translates them into Pydantic fields. A primary key becomes excluded from CreateSchema. A server default becomes excluded from write operations. A nullable column becomes an Optional field. You focus on your model. Schemap handles the validation layer.
 
+### What makes schemap unique
+
+**1. Four-variant generation as a first-class concept.**
+No other library auto-generates full, create, update, and public schemas with intelligent exclusion rules out of the box. Primary keys are excluded from create. All fields become optional in update. Private fields are filtered from public. These rules are not something you configure; they are built in.
+
+**2. Strict separation between ORM and validation.**
+SQLAlchemy stays pure SQLAlchemy. Pydantic stays Pydantic. Schemap never fuses them into a single class, unlike SQLModel. Your ORM models remain unaware of your API layer. You can swap Pydantic versions, switch validation libraries, or use your models outside of FastAPI without touching a single column definition.
+
+**3. Three API modes.**
+Use `AutoBase` inheritance for new projects. Use `@auto_schema` to decorate existing models without changing their base class. Use `build_schema` standalone when you need a schema without modifying the model at all. All three produce identical results.
+
+**4. Per-model customization via SchemaConfig.**
+Attach a `SchemaConfig` to any model to override field types, exclude fields from specific variants, force required or optional status, and add custom validators. The model itself stays clean; the configuration lives in one place.
+
 ## Quick Start
 
 Schemap gives you three ways to attach schemas to your models. All three produce identical schemas.
 
-**AutoBase** — inherit from the ready-made declarative base:
+**AutoBase**: inherit from the ready-made declarative base:
 ```python
 from schemap import AutoBase
 from sqlalchemy.orm import Mapped, mapped_column
@@ -48,7 +62,7 @@ class User(AutoBase):
     email: Mapped[str]
 ```
 
-**@auto_schema** — decorate any existing model without changing its base class:
+**@auto_schema**: decorate any existing model without changing its base class:
 ```python
 from schemap import auto_schema
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -112,11 +126,21 @@ The SchemaConfig class supports several exclusion options. `exclude_always` remo
 
 ## Built-in Mixins
 
-Schemap includes two reusable mixins for common model patterns.
+Schemap ships with nine reusable mixins for common model patterns.
 
 **TimestampMixin** adds `created_at` and `updated_at` columns. The timestamps set automatically on insert and update.
 
 **SoftDeleteMixin** adds a `deleted_at` column, a `soft_delete()` method, and an `active()` classmethod filter for excluding deleted records.
+
+**CreatedByMixin** and **UpdatedByMixin** add audit trail fields with foreign keys and relationships to a `users` table. Override `user_table` on subclasses to target a different table.
+
+**StatusMixin** adds a `status` column with `activate()` and `deactivate()` methods.
+
+**ArchivableMixin** adds an `archived_at` timestamp with `archive()` and `restore()` methods.
+
+**VersionMixin** adds a `version` int column with `increment_version()` for optimistic locking.
+
+**UUIDPrimaryKeyMixin** and **IntPrimaryKeyMixin** provide standard primary key columns.
 
 ```python
 from schemap import AutoBase, TimestampMixin, SoftDeleteMixin
@@ -167,7 +191,7 @@ Use `@auto_schema` to attach schemas to any SQLAlchemy model without inheritance
 ```python
 from schemap import auto_schema, SchemaConfig
 
-# Bare decorator — all defaults
+# Bare decorator, all defaults
 @auto_schema
 class User(Base):
     __tablename__ = "users"
