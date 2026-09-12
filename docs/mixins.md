@@ -56,21 +56,22 @@ class Document(AutoBase, CreatedByMixin, UpdatedByMixin):
 
 ## StatusMixin
 
-Adds `status` column with `activate()` and `deactivate()` methods.
+Adds `status` column with `activate()` and `deactivate()` methods. Uses the `Status` enum for values.
 
 ```python
-from schemap import StatusMixin, AutoBase
+from schemap import StatusMixin, Status, AutoBase
 
 class Subscription(AutoBase, StatusMixin):
     __tablename__ = "subscriptions"
     id: Mapped[int] = mapped_column(primary_key=True)
     plan: Mapped[str]
 
-sub.activate()   # status = "active"
-sub.deactivate() # status = "inactive"
+sub.activate()   # status = Status.ACTIVE
+sub.deactivate() # status = Status.INACTIVE
+sub.status       # Status.ACTIVE (a str enum, compares with "active")
 ```
 
-Default status is `"active"`.
+Default status is `Status.ACTIVE`.
 
 ## ArchivableMixin
 
