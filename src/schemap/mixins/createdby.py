@@ -33,7 +33,7 @@ class CreatedByMixin:
         return mapped_column(ForeignKey(f"{cls.user_table}.id"))
 
     @declared_attr
-    def created_by(cls) -> Mapped[Optional["User"]]:  # noqa: F821
+    def created_by(cls) -> Mapped[Optional["DeclarativeBase"]]:
         return relationship()
 
 
@@ -64,5 +64,5 @@ class UpdatedByMixin:
         return mapped_column(ForeignKey(f"{cls.user_table}.id"))
 
     @declared_attr
-    def updated_by(cls) -> Mapped[Optional["User"]]:  # noqa: F821
+    def updated_by(cls) -> Mapped[Optional["DeclarativeBase"]]:
         return relationship()

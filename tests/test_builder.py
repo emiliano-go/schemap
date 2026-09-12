@@ -2,7 +2,6 @@
 
 import pytest
 from datetime import datetime, timezone
-from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from typing import Optional, Union
 from schemap.builder import build_schema

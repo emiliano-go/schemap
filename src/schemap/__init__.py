@@ -1,6 +1,11 @@
 """ Automatic Pydantic schemas for SQLAlchemy models """
 
-__version__ = "0.5.2"
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("schemap")
+except PackageNotFoundError:
+    __version__ = "0.0.0"
 
 from schemap.base import AutoBase, SchemaMixin
 from schemap.builder import build_schema, SchemaType

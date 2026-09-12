@@ -6,7 +6,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = PROJECT_ROOT / "docs"
 OUTPUT = DOCS_DIR / "llms-full.txt"
-SITE_URL = "https://emiliano-gandini-outeda.me/schemap"
+SITE_URL = "https://schemap.emiliano-go.com"
 
 SKIP_FILES = {"llms.txt", "llms-full.txt"}
 SKIP_DIRS = {"overrides", "stylesheets"}

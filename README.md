@@ -13,6 +13,9 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-10AC84?style=for-the-badge" alt="License">
   </a>
+  <a href="https://schemap.emiliano-go.com/">
+    <img src="https://img.shields.io/badge/Docs-schemap.emiliano--go.com-4A90D9?style=for-the-badge" alt="Documentation">
+  </a>
   <a href="https://deepwiki.com/emiliano-go/schemap/">
     <img src="https://img.shields.io/badge/DeepWiki-8A2BE2?logo=readthedocs&logoColor=white&style=for-the-badge" alt="DeepWiki">
   </a>
@@ -24,6 +27,8 @@
 ```bash
 pip install schemap
 ```
+
+Requires Python 3.12 or later, SQLAlchemy 2.0.49 or later, Pydantic 2.13.4 or later.
 
 ## Why Schemap
 
@@ -49,7 +54,7 @@ Attach a `SchemaConfig` to any model to override field types, exclude fields fro
 
 Schemap gives you three ways to attach schemas to your models. All three produce identical schemas.
 
-**AutoBase**: inherit from the ready-made declarative base:
+**AutoBase**: inherit from the ready-made declarative base. Best for new projects where you have no existing base:
 ```python
 from schemap import AutoBase
 from sqlalchemy.orm import Mapped, mapped_column
@@ -62,7 +67,7 @@ class User(AutoBase):
     email: Mapped[str]
 ```
 
-**SchemaMixin**: mix into your own declarative base:
+**SchemaMixin**: mix into your own declarative base. Best when you already have a custom `DeclarativeBase` and want to keep it:
 ```python
 from schemap import SchemaMixin
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -77,7 +82,7 @@ class User(Base):
     email: Mapped[str]
 ```
 
-**@auto_schema**: decorate any existing model without changing its base class:
+**@auto_schema**: decorate any existing model without changing its base class. Best when you cannot change the model's base (third-party models, large codebases):
 ```python
 from schemap import auto_schema
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -219,10 +224,6 @@ class User(Base):
 ```
 
 The decorator runs after the class body and attaches `.Schema`, `.CreateSchema`, `.UpdateSchema`, `.PublicSchema`, `.from_schema()`, and `.to_schema()` directly to your class. Your model's inheritance chain stays unchanged.
-
-## Requirements
-
-Python 3.12 or later, SQLAlchemy 2.0.49 or later, Pydantic 2.13.4 or later.
 
 ## License
 

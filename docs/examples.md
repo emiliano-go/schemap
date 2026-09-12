@@ -85,6 +85,7 @@ class User(AutoBase):
 ## Custom validators
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import AutoBase, SchemaConfig
 
 def must_be_positive(v: float) -> float:
@@ -130,6 +131,7 @@ Each subclass gets its own set of four schemas with its own columns.
 ### Custom base class
 
 ```python
+from datetime import datetime, timezone
 from schemap import SchemaMixin
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 

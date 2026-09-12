@@ -3,7 +3,7 @@ from typing import Any
 from collections.abc import Callable
 
 
-@dataclass(repr=True, eq=True)
+@dataclass
 class SchemaConfig:
     """Configuration for auto-generated Pydantic schemas.
 

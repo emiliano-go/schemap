@@ -4,10 +4,24 @@ __pycache__/
 build/
 dist/
 wheels/
+*.egg
 *.egg-info
 
 # Virtual environments
 .venv
 
+# Testing
+.pytest_cache/
+.benchmarks/
+.coverage
+htmlcov/
+
+# Linting/type-checking
+.mypy_cache/
+.ruff_cache/
+
 # Documentation build output
 site/
+
+# Environment
+.env

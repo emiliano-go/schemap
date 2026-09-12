@@ -4,7 +4,7 @@
 
 Schemap supports three approaches. All three produce identical schemas. Pick the one that fits your project.
 
-**AutoBase**: inherit from the ready-made declarative base:
+**AutoBase**: inherit from the ready-made declarative base. Best for new projects where you have no existing base:
 
 ```python
 from schemap import AutoBase
@@ -18,7 +18,7 @@ class Product(AutoBase):
     price: Mapped[float] = mapped_column(nullable=True)
 ```
 
-**SchemaMixin**: use with an existing custom declarative base:
+**SchemaMixin**: mix into your own declarative base. Best when you already have a custom `DeclarativeBase` and want to keep it:
 
 ```python
 from schemap import SchemaMixin
@@ -33,7 +33,7 @@ class Product(Base):
     title: Mapped[str]
 ```
 
-**@auto_schema**: decorate any model without changing its base class:
+**@auto_schema**: decorate any model without changing its base class. Best when you cannot change the model's base (third-party models, large codebases):
 
 ```python
 from schemap import auto_schema, SchemaConfig
@@ -81,6 +81,7 @@ user = User.from_schema(data)
 Attach `SchemaConfig` to any model with `__schema_config__`:
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import AutoBase, SchemaConfig
 
 class User(AutoBase):

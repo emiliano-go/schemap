@@ -1,10 +1,10 @@
 # schemap Documentation
 > Full documentation for schemap — Automatic Pydantic schemas from SQLAlchemy models
-> Source: https://emiliano-gandini-outeda.me/schemap
+> Source: https://schemap.emiliano-go.com
 > Pages: 6
 
 ========================================================================
-PAGE: https://emiliano-gandini-outeda.me/schemap/api/
+PAGE: https://schemap.emiliano-go.com/api/
 ========================================================================
 
 # API Reference
@@ -191,7 +191,7 @@ Raises `TypeError` if model is not a SQLAlchemy mapped class. Raises `ValueError
 | `ARRAY` | `list` |
 
 ========================================================================
-PAGE: https://emiliano-gandini-outeda.me/schemap/development/
+PAGE: https://schemap.emiliano-go.com/development/
 ========================================================================
 
 # Development
@@ -244,7 +244,7 @@ src/schemap/
 - Run `uv run python -m pytest tests/ -v` before committing.
 
 ========================================================================
-PAGE: https://emiliano-gandini-outeda.me/schemap/examples/
+PAGE: https://schemap.emiliano-go.com/examples/
 ========================================================================
 
 # Examples
@@ -334,6 +334,7 @@ class User(AutoBase):
 ## Custom validators
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import AutoBase, SchemaConfig
 
 def must_be_positive(v: float) -> float:
@@ -379,6 +380,7 @@ Each subclass gets its own set of four schemas with its own columns.
 ### Custom base class
 
 ```python
+from datetime import datetime, timezone
 from schemap import SchemaMixin
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -395,7 +397,7 @@ class User(Base):
 ```
 
 ========================================================================
-PAGE: https://emiliano-gandini-outeda.me/schemap/
+PAGE: https://schemap.emiliano-go.com/
 ========================================================================
 
 # schemap
@@ -479,7 +481,7 @@ User.PublicSchema   # Excludes sensitive fields
 - PEP 561 `py.typed` marker for full IDE and type checker support.
 
 ========================================================================
-PAGE: https://emiliano-gandini-outeda.me/schemap/mixins/
+PAGE: https://schemap.emiliano-go.com/mixins/
 ========================================================================
 
 # Mixins
@@ -491,6 +493,7 @@ Schemap ships with nine reusable mixins for common patterns.
 Adds `created_at` and `updated_at` with auto-populating defaults.
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import TimestampMixin, AutoBase
 
 class Post(AutoBase, TimestampMixin):
@@ -506,6 +509,7 @@ Both columns use `default=lambda: datetime.now(timezone.utc)`. `updated_at` also
 Adds `deleted_at` timestamp, `soft_delete()`, and `active()` filter.
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import SoftDeleteMixin, AutoBase
 
 class Article(AutoBase, SoftDeleteMixin):
@@ -528,6 +532,7 @@ results = session.execute(
 Audit trail mixins with foreign keys and relationships to `users`.
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import CreatedByMixin, UpdatedByMixin, AutoBase
 
 class Document(AutoBase, CreatedByMixin, UpdatedByMixin):
@@ -543,6 +548,7 @@ class Document(AutoBase, CreatedByMixin, UpdatedByMixin):
 Adds `status` column with `activate()` and `deactivate()` methods. Uses the `Status` enum for values.
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import StatusMixin, Status, AutoBase
 
 class Subscription(AutoBase, StatusMixin):
@@ -562,6 +568,7 @@ Default status is `Status.ACTIVE`.
 Adds `archived_at` timestamp with `archive()` and `restore()` methods.
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import ArchivableMixin, AutoBase
 
 class Order(AutoBase, ArchivableMixin):
@@ -578,6 +585,7 @@ order.restore()   # archived_at is None
 Adds `version: int` column for optimistic locking.
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import VersionMixin, AutoBase
 
 class Product(AutoBase, VersionMixin):
@@ -593,6 +601,7 @@ product.increment_version()
 Standard primary key columns.
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import UUIDPrimaryKeyMixin, IntPrimaryKeyMixin, AutoBase
 
 class Tenant(AutoBase, UUIDPrimaryKeyMixin):
@@ -630,7 +639,7 @@ Guidelines:
 - Add methods for domain logic (activate, archive, soft_delete, etc.).
 
 ========================================================================
-PAGE: https://emiliano-gandini-outeda.me/schemap/tutorial/
+PAGE: https://schemap.emiliano-go.com/tutorial/
 ========================================================================
 
 # Tutorial
@@ -716,6 +725,7 @@ user = User.from_schema(data)
 Attach `SchemaConfig` to any model with `__schema_config__`:
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import AutoBase, SchemaConfig
 
 class User(AutoBase):

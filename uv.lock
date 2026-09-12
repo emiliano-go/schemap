@@ -490,7 +490,7 @@ wheels = [
 
 [[package]]
 name = "schemap"
-version = "0.5.2"
+version = "0.6.1"
 source = { editable = "." }
 dependencies = [
     { name = "cached-classproperty" },
@@ -504,6 +504,7 @@ dev = [
     { name = "pytest-cov" },
 ]
 docs = [
+    { name = "seoslug" },
     { name = "zensical" },
 ]
 
@@ -513,10 +514,20 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.13.4" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
+    { name = "seoslug", marker = "extra == 'docs'", specifier = ">=2.0.1" },
     { name = "sqlalchemy", specifier = ">=2.0.49" },
     { name = "zensical", marker = "extra == 'docs'" },
 ]
 provides-extras = ["dev", "docs"]
+
+[[package]]
+name = "seoslug"
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b2/45/3f34c7964dcfecfd1df71c7daaadd70be8b758810fc98fd7f49a044d994e/seoslug-2.3.0.tar.gz", hash = "sha256:81446de693ddc95d0080ed93ccd17d0f1a2bb4b7f6aa5fa6856d3e068248fc3f", size = 58772, upload-time = "2026-07-08T16:00:09.278Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/49/c6/544db05a3b47a30812f9c2f11620ac9870b77cbb9b3890ac8a270b3b5dc0/seoslug-2.3.0-py3-none-any.whl", hash = "sha256:5f30e42429be32f3579135f8e43796d8cec38d46f48add82b0244559d0575b1f", size = 39092, upload-time = "2026-07-08T16:00:08.106Z" },
+]
 
 [[package]]
 name = "sqlalchemy"

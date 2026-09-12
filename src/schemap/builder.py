@@ -103,7 +103,10 @@ def build_schema(
     validators = {}
     if config and config.extra_validators:
         for field_name, validator_func in config.extra_validators.items():
-            validators[f"validate_{field_name}"] = field_validator(field_name)(validator_func)
+            if field_name in fields:
+                validators[f"validate_{field_name}"] = field_validator(
+                    field_name
+                )(_wrap_validator(validator_func))
 
     schema_class = create_model(
         schema_name,
@@ -131,3 +134,17 @@ def _validate_config(config: SchemaConfig, actual_columns: set[str], model_name:
         raise ValueError(
             f"SchemaConfig for {model_name!r} references unknown columns: {unknown}"
         )
+
+
+def _wrap_validator(validator):
+    """Wrap a user validator to pass through None values.
+
+    Pydantic calls validators on all values including None for optional
+    fields. Most validators don't handle None, causing TypeError. This
+    wrapper skips the validator when the value is None.
+    """
+    def wrapper(v):
+        if v is None:
+            return v
+        return validator(v)
+    return wrapper

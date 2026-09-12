@@ -17,7 +17,11 @@ keywords = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries",
 ]
 
 dependencies = [
@@ -37,6 +41,8 @@ docs = ["seoslug>=2.0.1", "zensical"]
 Homepage = "https://github.com/emiliano-go/schemap"
 Repository = "https://github.com/emiliano-go/schemap"
 Issues = "https://github.com/emiliano-go/schemap/issues"
+Documentation = "https://schemap.emiliano-go.com"
+Changelog = "https://github.com/emiliano-go/schemap/releases"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]

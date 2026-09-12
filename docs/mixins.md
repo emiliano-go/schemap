@@ -7,6 +7,7 @@ Schemap ships with nine reusable mixins for common patterns.
 Adds `created_at` and `updated_at` with auto-populating defaults.
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import TimestampMixin, AutoBase
 
 class Post(AutoBase, TimestampMixin):
@@ -22,6 +23,7 @@ Both columns use `default=lambda: datetime.now(timezone.utc)`. `updated_at` also
 Adds `deleted_at` timestamp, `soft_delete()`, and `active()` filter.
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import SoftDeleteMixin, AutoBase
 
 class Article(AutoBase, SoftDeleteMixin):
@@ -44,6 +46,7 @@ results = session.execute(
 Audit trail mixins with foreign keys and relationships to `users`.
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import CreatedByMixin, UpdatedByMixin, AutoBase
 
 class Document(AutoBase, CreatedByMixin, UpdatedByMixin):
@@ -59,6 +62,7 @@ class Document(AutoBase, CreatedByMixin, UpdatedByMixin):
 Adds `status` column with `activate()` and `deactivate()` methods. Uses the `Status` enum for values.
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import StatusMixin, Status, AutoBase
 
 class Subscription(AutoBase, StatusMixin):
@@ -78,6 +82,7 @@ Default status is `Status.ACTIVE`.
 Adds `archived_at` timestamp with `archive()` and `restore()` methods.
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import ArchivableMixin, AutoBase
 
 class Order(AutoBase, ArchivableMixin):
@@ -94,6 +99,7 @@ order.restore()   # archived_at is None
 Adds `version: int` column for optimistic locking.
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import VersionMixin, AutoBase
 
 class Product(AutoBase, VersionMixin):
@@ -109,6 +115,7 @@ product.increment_version()
 Standard primary key columns.
 
 ```python
+from sqlalchemy.orm import Mapped, mapped_column
 from schemap import UUIDPrimaryKeyMixin, IntPrimaryKeyMixin, AutoBase
 
 class Tenant(AutoBase, UUIDPrimaryKeyMixin):

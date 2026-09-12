@@ -3,14 +3,13 @@
 > Automatic Pydantic v2 schemas from SQLAlchemy 2.0 ORM models. Define your model once. Four schemas come for free.
 
 ## Overview
-- [schemap](https://emiliano-gandini-outeda.me/schemap/): Automatic Pydantic schemas from SQLAlchemy models
-- [Tutorial](https://emiliano-gandini-outeda.me/schemap/tutorial/): Step-by-step guide to generating schemas from your models
-- [Installation](https://emiliano-gandini-outeda.me/schemap/installation/): Install schemap via pip
+- [schemap](https://schemap.emiliano-go.com/): Automatic Pydantic schemas from SQLAlchemy models
+- [Tutorial](https://schemap.emiliano-go.com/tutorial/): Step-by-step guide to generating schemas from your models
 
 ## Reference
-- [API Reference](https://emiliano-gandini-outeda.me/schemap/api/): Complete API docs for schemap functions and decorators
-- [Mixins](https://emiliano-gandini-outeda.me/schemap/mixins/): Reusable schema mixins for common patterns
-- [Examples](https://emiliano-gandini-outeda.me/schemap/examples/): Practical examples of schemap in real projects
-- [Development](https://emiliano-gandini-outeda.me/schemap/development/): Contributing guide and development setup
+- [API Reference](https://schemap.emiliano-go.com/api/): Complete API docs for schemap functions and decorators
+- [Mixins](https://schemap.emiliano-go.com/mixins/): Reusable schema mixins for common patterns
+- [Examples](https://schemap.emiliano-go.com/examples/): Practical examples of schemap in real projects
+- [Development](https://schemap.emiliano-go.com/development/): Contributing guide and development setup
 
-For the full documentation in a single file, see [llms-full.txt](https://emiliano-gandini-outeda.me/schemap/llms-full.txt).
+For the full documentation in a single file, see [llms-full.txt](https://schemap.emiliano-go.com/llms-full.txt).

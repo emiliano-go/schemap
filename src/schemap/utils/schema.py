@@ -1,8 +1,23 @@
 from typing import Any, Optional
 
-from pydantic import Field
+from pydantic import BaseModel, Field
+from sqlalchemy import inspect
 
 from ..config import SchemaConfig
+
+_mapped_keys_cache: dict[type, set[str]] = {}
+
+
+def from_schema(cls: type, schema_obj: BaseModel | dict[str, Any]) -> Any:
+    """Create an ORM instance from a Pydantic schema or dict."""
+    if isinstance(schema_obj, dict):
+        mapped = _mapped_keys_cache.get(cls)
+        if mapped is None:
+            mapped = {c.key for c in inspect(cls).columns}
+            _mapped_keys_cache[cls] = mapped
+        data = {k: v for k, v in schema_obj.items() if k in mapped and v is not ...}
+        return cls(**data)
+    return cls(**schema_obj.model_dump(exclude_unset=True))
 
 
 def should_include(schema_type: str, metadata: dict[str, Any], config: SchemaConfig | None = None) -> bool:

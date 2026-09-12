@@ -5,25 +5,12 @@ from __future__ import annotations
 from typing import Any, Callable, TypeVar, overload
 
 from pydantic import BaseModel
-from sqlalchemy import inspect
 
 from .builder import build_schema
 from .config import SchemaConfig
+from .utils.schema import from_schema as _from_schema_shared
 
 T = TypeVar("T")
-
-_mapped_keys_cache: dict[type, set[str]] = {}
-
-
-def _from_schema(cls: type, schema_obj: BaseModel | dict[str, Any]) -> Any:
-    if isinstance(schema_obj, dict):
-        mapped = _mapped_keys_cache.get(cls)
-        if mapped is None:
-            mapped = {c.key for c in inspect(cls).columns}
-            _mapped_keys_cache[cls] = mapped
-        data = {k: v for k, v in schema_obj.items() if k in mapped and v is not ...}
-        return cls(**data)
-    return cls(**schema_obj.model_dump(exclude_unset=True))
 
 
 def _to_schema(self: Any, schema_cls: type[BaseModel] | None = None) -> BaseModel:
@@ -38,7 +25,7 @@ def _apply_auto_schema(cls: type, config: SchemaConfig | None) -> type:
     cls.CreateSchema = build_schema(cls, "create", cfg)
     cls.UpdateSchema = build_schema(cls, "update", cfg)
     cls.PublicSchema = build_schema(cls, "public", cfg)
-    cls.from_schema = classmethod(_from_schema)
+    cls.from_schema = classmethod(_from_schema_shared)
     cls.to_schema = _to_schema
     return cls
 

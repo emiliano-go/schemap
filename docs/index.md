@@ -12,7 +12,7 @@ pip install schemap
 
 Schemap gives you three approaches (`AutoBase`, `SchemaMixin`, or `@auto_schema`). They all produce identical schemas.
 
-**AutoBase**: inherit from the ready-made base:
+**AutoBase**: inherit from the ready-made base. Best for new projects where you have no existing declarative base:
 
 ```python
 from schemap import AutoBase
@@ -26,7 +26,7 @@ class User(AutoBase):
     email: Mapped[str]
 ```
 
-**SchemaMixin**: mix into your own declarative base:
+**SchemaMixin**: mix into your own declarative base. Best when you already have a custom `DeclarativeBase` and want to keep it:
 
 ```python
 from schemap import SchemaMixin
@@ -42,7 +42,7 @@ class User(Base):
     email: Mapped[str]
 ```
 
-**@auto_schema**: decorate any existing model:
+**@auto_schema**: decorate any existing model. Best when you cannot change the model's base class (third-party models, large codebases):
 
 ```python
 from schemap import auto_schema

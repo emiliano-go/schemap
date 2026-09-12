@@ -6,14 +6,12 @@ from typing import Any, Self, TypeVar
 
 from cached_classproperty import cached_classproperty
 from pydantic import BaseModel
-from sqlalchemy import inspect
 from sqlalchemy.orm import DeclarativeBase
 
 from .builder import build_schema
+from .utils.schema import from_schema as _from_schema_shared
 
 T = TypeVar("T", bound=BaseModel)
-
-_mapped_keys_cache: dict[type, set[str]] = {}
 
 
 class SchemaMixin:
@@ -95,14 +93,7 @@ class SchemaMixin:
             # From a dict
             user = User.from_schema({"name": "bob"})
         """
-        if isinstance(schema_obj, dict):
-            mapped = _mapped_keys_cache.get(cls)
-            if mapped is None:
-                mapped = {c.key for c in inspect(cls).columns}
-                _mapped_keys_cache[cls] = mapped
-            data = {k: v for k, v in schema_obj.items() if k in mapped and v is not ...}
-            return cls(**data)
-        return cls(**schema_obj.model_dump(exclude_unset=True))
+        return _from_schema_shared(cls, schema_obj)
 
     def to_schema(self, schema_cls: type[BaseModel] | None = None) -> BaseModel:
         """Convert this ORM instance to a Pydantic schema.

@@ -1,9 +1,6 @@
 """Tests for AutoBase and SchemaMixin."""
 
-import pytest
-from datetime import datetime
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase
 
 from schemap.base import AutoBase, SchemaMixin
 from sqlalchemy.orm import Mapped, mapped_column
