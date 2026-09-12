@@ -380,6 +380,22 @@ class User(AutoBase):
     email: Mapped[str]
 ```
 
+**SchemaMixin** — mix into your own declarative base:
+
+```python
+from schemap import SchemaMixin
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(SchemaMixin, DeclarativeBase):
+    pass
+
+class User(Base):
+    __tablename__ = "users"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    email: Mapped[str]
+```
+
 **@auto_schema** — decorate any existing model:
 
 ```python
@@ -397,7 +413,7 @@ class User(Base):
     email: Mapped[str]
 ```
 
-Both give you the same four schemas:
+All three give you the same four schemas:
 
 ```python
 User.Schema         # Full schema, all columns
@@ -411,7 +427,7 @@ User.PublicSchema   # Excludes sensitive fields
 - One model definition, four schemas generated automatically.
 - Three approaches: `AutoBase`, `SchemaMixin`, or `@auto_schema` decorator.
 - SchemaConfig for field exclusion, type overrides, and custom validators.
-- Timestamp, soft delete, audit, and versioning mixins included.
+- Timestamp, soft delete, audit, status, archivable, and versioning mixins included.
 
 ========================================================================
 PAGE: https://emiliano-gandini-outeda.me/schemap/mixins/

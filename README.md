@@ -40,7 +40,7 @@ No other library auto-generates full, create, update, and public schemas with in
 SQLAlchemy stays pure SQLAlchemy. Pydantic stays Pydantic. Schemap never fuses them into a single class. Your ORM models remain unaware of your API layer. You can swap Pydantic versions, switch validation libraries, or use your models outside of FastAPI without touching a single column definition.
 
 **3. Three API modes.**
-Use `AutoBase` inheritance for new projects. Use `@auto_schema` to decorate existing models without changing their base class. Use `build_schema` standalone when you need a schema without modifying the model at all. All three produce identical results.
+Use `AutoBase` inheritance for new projects. Use `SchemaMixin` to mix into your own declarative base. Use `@auto_schema` to decorate existing models without changing their base class. All three produce identical results.
 
 **4. Per-model customization via SchemaConfig.**
 Attach a `SchemaConfig` to any model to override field types, exclude fields from specific variants, force required or optional status, and add custom validators. The model itself stays clean; the configuration lives in one place.
