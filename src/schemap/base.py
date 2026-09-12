@@ -1,51 +1,146 @@
 """Base classes for automatic schemap generation."""
 
-from typing import Type, Any
+from __future__ import annotations
+
+from typing import Any, Self, TypeVar
+
 from cached_classproperty import cached_classproperty
+from pydantic import BaseModel
+from sqlalchemy import inspect
 from sqlalchemy.orm import DeclarativeBase
 
 from .builder import build_schema
 
+T = TypeVar("T", bound=BaseModel)
+
+_mapped_keys_cache: dict[type, set[str]] = {}
+
+
 class SchemaMixin:
-    """ Mixin that ds auto-generated Pydantic schemas as class attributes """
+    """Mixin that adds auto-generated Pydantic schemas as class attributes.
+
+    Provides four schema variants as cached class properties, plus
+    ``from_schema()`` and ``to_schema()`` for conversion.
+
+    Used by ``AutoBase`` and the ``@auto_schema`` decorator::
+
+        class User(AutoBase):
+            __tablename__ = "users"
+            id: Mapped[int] = mapped_column(primary_key=True)
+            name: Mapped[str]
+    """
 
     @cached_classproperty
-    def Schema(cls) -> Any:
-        """ Full schema with all columns """
+    def Schema(cls) -> type[BaseModel]:
+        """Full schema with all columns.
+
+        Includes every mapped column with its original type and nullability::
+
+            User.Schema.model_fields
+            # {'id': FieldInfo(annotation=int, required=True),
+            #  'name': FieldInfo(annotation=str, required=True)}
+        """
         config = getattr(cls, "__schema_config__", None)
-        return build_schema(cls, schema_type="default", config=config)
-    
+        return build_schema(cls, schema_type="full", config=config)
+
     @cached_classproperty
-    def CreateSchema(cls) -> Any:
-        """ Schema for creating new instances (excludes primary keys, server defaults) """
+    def CreateSchema(cls) -> type[BaseModel]:
+        """Schema for creating new instances.
+
+        Excludes primary keys, server defaults, and columns with client-side
+        defaults::
+
+            User.CreateSchema.model_fields
+            # {'name': FieldInfo(annotation=str, required=True)}
+        """
         config = getattr(cls, "__schema_config__", None)
         return build_schema(cls, schema_type="create", config=config)
 
     @cached_classproperty
-    def UpdateSchema(cls) -> Any:
-        """ Schema for partial updates (all fields optional) """
+    def UpdateSchema(cls) -> type[BaseModel]:
+        """Schema for partial updates (all fields optional).
+
+        Every field is ``Optional[T]`` with a default of ``None``::
+
+            User.UpdateSchema.model_fields
+            # {'name': FieldInfo(annotation=Optional[str], required=False)}
+        """
         config = getattr(cls, "__schema_config__", None)
         return build_schema(cls, schema_type="update", config=config)
-    
+
     @cached_classproperty
-    def PublicSchema(cls) -> Any:
-        """ Public-facing schema (excludes sensitive fields) """
+    def PublicSchema(cls) -> type[BaseModel]:
+        """Public-facing schema (excludes sensitive fields).
+
+        Excludes columns matching ``public_exclude_prefix`` (default: ``"__"``)::
+
+            User.PublicSchema.model_fields
+            # {'id': ..., 'name': ...}  # __internal__ excluded
+        """
         config = getattr(cls, "__schema_config__", None)
         return build_schema(cls, schema_type="public", config=config)
-    
-    @classmethod
-    def from_schema(cls, schema_obj : Any) -> Any:
-        """ Create ORM instance from Pydantic Schema """
-        return cls(**schema_obj.model_dump(exclude_none=True))
 
-    def to_schema(self, schema_cls : Type[Any] = None) -> Any:
-        """ Convert ORM instance to Pydantic schema """
+    @classmethod
+    def from_schema(cls, schema_obj: BaseModel | dict[str, Any]) -> Self:
+        """Create an ORM instance from a Pydantic schema or dict.
+
+        Accepts a Pydantic model instance or a plain dict. Unset fields
+        are dropped (not passed to the constructor). Unknown keys in dicts
+        are silently ignored (only mapped columns are used)::
+
+            # From a schema
+            data = User.CreateSchema(name="alice")
+            user = User.from_schema(data)
+
+            # From a dict
+            user = User.from_schema({"name": "bob"})
+        """
+        if isinstance(schema_obj, dict):
+            mapped = _mapped_keys_cache.get(cls)
+            if mapped is None:
+                mapped = {c.key for c in inspect(cls).columns}
+                _mapped_keys_cache[cls] = mapped
+            data = {k: v for k, v in schema_obj.items() if k in mapped and v is not ...}
+            return cls(**data)
+        return cls(**schema_obj.model_dump(exclude_unset=True))
+
+    def to_schema(self, schema_cls: type[BaseModel] | None = None) -> BaseModel:
+        """Convert this ORM instance to a Pydantic schema.
+
+        Defaults to ``self.Schema`` (the full schema)::
+
+            user = User(id=1, name="alice")
+            schema = user.to_schema()
+            schema.model_dump()  # {'id': 1, 'name': 'alice'}
+
+            # Use a specific schema variant:
+            schema = user.to_schema(User.PublicSchema)
+        """
         if schema_cls is None:
             schema_cls = self.Schema
-
         return schema_cls.model_validate(self)
 
 
 class AutoBase(SchemaMixin, DeclarativeBase):
-    """ Base class for all models. Inherit from this to get auto-schemas """
+    """Base class for all models. Inherit from this to get auto-schemas.
+
+    Example::
+
+        from schemap import AutoBase
+        from sqlalchemy.orm import Mapped, mapped_column
+
+        class User(AutoBase):
+            __tablename__ = "users"
+            id: Mapped[int] = mapped_column(primary_key=True)
+            name: Mapped[str]
+
+        # Schemas are available immediately:
+        User.Schema.model_fields
+        User.CreateSchema.model_fields
+
+        # Conversion:
+        user = User.from_schema({"name": "alice"})
+        schema = user.to_schema()
+    """
+
     pass
