@@ -10,9 +10,9 @@ pip install schemap
 
 ## Quick start
 
-Schemap gives you three approaches — `AutoBase`, `SchemaMixin`, or `@auto_schema`. They all produce identical schemas.
+Schemap gives you three approaches (`AutoBase`, `SchemaMixin`, or `@auto_schema`). They all produce identical schemas.
 
-**AutoBase** — inherit from the ready-made base:
+**AutoBase**: inherit from the ready-made base:
 
 ```python
 from schemap import AutoBase
@@ -26,7 +26,7 @@ class User(AutoBase):
     email: Mapped[str]
 ```
 
-**@auto_schema** — decorate any existing model:
+**@auto_schema**: decorate any existing model:
 
 ```python
 from schemap import auto_schema
