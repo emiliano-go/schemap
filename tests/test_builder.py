@@ -24,7 +24,7 @@ class User(Base):
 
 def test_build_full_schema():
     """Test building complete schema with all fields."""
-    UserSchema = build_schema(User, "default")
+    UserSchema = build_schema(User, "full")
     
     # Check schema has all expected fields
     assert "id" in UserSchema.model_fields
@@ -67,7 +67,7 @@ def test_build_update_schema():
 
 def test_can_create_instance():
     """Test the generated schema can actually create instances."""
-    UserSchema = build_schema(User, "default")
+    UserSchema = build_schema(User, "full")
     
     user = UserSchema(
         id=1,
@@ -79,3 +79,12 @@ def test_can_create_instance():
     
     assert user.username == "testuser"
     assert user.model_dump()["username"] == "testuser"
+
+
+def test_non_mapped_class_raises_type_error():
+    """Test that build_schema with a non-mapped class raises TypeError."""
+    with pytest.raises(TypeError, match="SQLAlchemy mapped class"):
+        build_schema(str, "full")
+
+    with pytest.raises(TypeError, match="SQLAlchemy mapped class"):
+        build_schema(int, "create")
