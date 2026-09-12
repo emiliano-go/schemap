@@ -26,6 +26,22 @@ class User(AutoBase):
     email: Mapped[str]
 ```
 
+**SchemaMixin**: mix into your own declarative base:
+
+```python
+from schemap import SchemaMixin
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+class Base(SchemaMixin, DeclarativeBase):
+    pass
+
+class User(Base):
+    __tablename__ = "users"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    email: Mapped[str]
+```
+
 **@auto_schema**: decorate any existing model:
 
 ```python
@@ -43,7 +59,7 @@ class User(Base):
     email: Mapped[str]
 ```
 
-Both give you the same four schemas:
+All three give you the same four schemas:
 
 ```python
 User.Schema         # Full schema, all columns
