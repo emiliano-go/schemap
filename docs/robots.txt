@@ -1,6 +1,6 @@
 User-agent: *
 Allow: /
-Sitemap: https://emiliano-gandini-outeda.me/schemap/sitemap.xml
+Sitemap: https://schemap.emiliano-go.com/sitemap.xml
 
 # As a condition of accessing this website, you agree to abide by the following
 # content signals:

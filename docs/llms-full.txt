@@ -17,6 +17,8 @@ from schemap import (
     AutoBase,
     SchemaMixin,
     SchemaConfig,
+    SchemaType,
+    Status,
     ArchivableMixin,
     CreatedByMixin,
     IntPrimaryKeyMixin,
@@ -26,8 +28,11 @@ from schemap import (
     UUIDPrimaryKeyMixin,
     UpdatedByMixin,
     VersionMixin,
+    build_schema,
+    extract_python_type,
+    extract_column_metadata,
+    ColumnLike,
 )
-from schemap import build_schema
 ```
 
 ## AutoBase
@@ -44,17 +49,17 @@ Mixin that adds four schema class properties and two conversion methods.
 
 **Class properties:**
 
-- `Schema` -- Full schema with all columns.
-- `CreateSchema` -- Excludes PKs, server_defaults, defaults.
-- `UpdateSchema` -- All fields Optional with None default.
-- `PublicSchema` -- Excludes `__`-prefixed columns.
+- `Schema`: full schema with all columns.
+- `CreateSchema`: excludes PKs, server_defaults, defaults.
+- `UpdateSchema`: all fields Optional with None default.
+- `PublicSchema`: excludes `__`-prefixed columns.
 
 Schemas are cached per class via `cached_classproperty`.
 
 **Methods:**
 
-- `from_schema(cls, schema_obj)` -- Create ORM instance from Pydantic schema. Uses `model_dump(exclude_none=True)`.
-- `to_schema(self, schema_cls=None)` -- Convert ORM instance to schema. Defaults to `.Schema`.
+- `from_schema(cls, schema_obj)`: create ORM instance from Pydantic schema or dict. Uses `model_dump(exclude_unset=True)`. Unknown dict keys are silently ignored.
+- `to_schema(self, schema_cls=None)`: convert ORM instance to schema. Defaults to `.Schema`.
 
 **Configuration:**
 
@@ -77,7 +82,7 @@ def auto_schema(
 ```python
 from schemap import auto_schema, SchemaConfig
 
-# Bare decorator — all defaults
+# Bare decorator, all defaults
 @auto_schema
 class User(Base):
     __tablename__ = "users"
@@ -91,41 +96,81 @@ class User(Base):
 
 Attaches `.Schema`, `.CreateSchema`, `.UpdateSchema`, `.PublicSchema`, `.from_schema()`, and `.to_schema()` to the decorated class. Works with any `DeclarativeBase` subclass. All three approaches (`AutoBase`, `SchemaMixin`, `@auto_schema`) produce identical schemas.
 
-**Schema types:** `"full"` (all columns), `"create"` (excludes PKs and defaults), `"update"` (all optional), `"public"` (excludes `__`-prefixed columns).
-
 ## SchemaConfig
 
 Dataclass for per-model schema customization. All fields are optional.
 
-- `exclude_always: list[str] = []`
-- `exclude_create: list[str] = []`
-- `exclude_update: list[str] = []`
-- `exclude_public: list[str] = []`
-- `field_overrides: dict[str, Any] = {}`
-- `required_always: list[str] = []`
-- `optional_always: list[str] = []`
-- `extra_validators: dict[str, Callable] = {}`
+```python
+from schemap import SchemaConfig
+
+config = SchemaConfig(
+    exclude_always=["internal_id"],
+    exclude_create=["notes"],
+    exclude_update=["created_at"],
+    exclude_public=["email", "phone"],
+    field_overrides={"score": Decimal},
+    required_always=["email"],
+    optional_always=["bio"],
+    extra_validators={"price": my_validator},
+    public_exclude_prefix=("_secret",),
+)
+```
+
+- `exclude_always: list[str] = []` — excluded from all schemas.
+- `exclude_create: list[str] = []` — excluded from CreateSchema only.
+- `exclude_update: list[str] = []` — excluded from UpdateSchema only.
+- `exclude_public: list[str] = []` — excluded from PublicSchema only.
+- `field_overrides: dict[str, Any] = {}` — override a field's Python type.
+- `required_always: list[str] = []` — force fields to be required.
+- `optional_always: list[str] = []` — force fields to be optional.
+- `extra_validators: dict[str, Callable] = {}` — custom validators per field.
+- `public_exclude_prefix: tuple[str, ...] = ("__",)` — prefixes excluded from PublicSchema.
+
+Raises `ValueError` if a field appears in both `required_always` and `optional_always`, or if config references unknown column names.
+
+## SchemaType
+
+```python
+SchemaType = Literal["full", "create", "update", "public"]
+```
+
+Type alias for the four schema variants:
+
+- `"full"`: all columns with original types and nullability.
+- `"create"`: excludes PKs, server defaults, client defaults.
+- `"update"`: all fields `Optional[T]` with `None` default.
+- `"public"`: excludes columns matching `public_exclude_prefix`.
+
+## Status
+
+```python
+class Status(str, Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+```
+
+Enum for use with `StatusMixin`. Inherits from `str` so it compares directly with string values.
 
 ## build_schema
 
 ```python
 def build_schema(
     model: type[DeclarativeBase],
-    schema_type: str = "default",
+    schema_type: SchemaType = "full",
     config: SchemaConfig | None = None,
 ) -> type[BaseModel]
 ```
 
 Build a Pydantic schema class for any SQLAlchemy model without using `AutoBase`.
 
-**schema_type values:** `"default"`, `"full"`, `"create"`, `"update"`, `"public"`.
-
 ```python
 from schemap import build_schema, SchemaConfig
 
-UserSchema = build_schema(User, "default")
+UserSchema = build_schema(User, "full")
 UserCreateSchema = build_schema(User, "create", config=SchemaConfig(exclude_create=["internal_id"]))
 ```
+
+Raises `TypeError` if model is not a SQLAlchemy mapped class. Raises `ValueError` if config references unknown column names.
 
 ## Type mapping
 
@@ -140,8 +185,9 @@ UserCreateSchema = build_schema(User, "create", config=SchemaConfig(exclude_crea
 | `Date` | `date` |
 | `Time` | `time` |
 | `LargeBinary`, `BLOB` | `bytes` |
-| `JSON` | `dict` |
+| `JSON` | `Any` |
 | `UUID` | `uuid.UUID` |
+| `Enum` | Concrete enum class (e.g. `Color`) |
 | `ARRAY` | `list` |
 
 ========================================================================
@@ -162,7 +208,7 @@ uv sync
 ## Running tests
 
 ```bash
-uv run pytest
+uv run python -m pytest tests/ -v
 ```
 
 Tests use SQLite in-memory databases. No external database needed.
@@ -182,10 +228,10 @@ Output goes to `site/`. Add `site/` to your `.gitignore`.
 src/schemap/
 ├── __init__.py    # Public API exports
 ├── base.py        # AutoBase, SchemaMixin
-├── builder.py     # build_schema()
+├── builder.py     # build_schema(), SchemaType
 ├── config.py      # SchemaConfig dataclass
 ├── decorator.py   # @auto_schema decorator
-├── methods.py     # from_schema / to_schema helpers
+├── py.typed       # PEP 561 type marker
 ├── types.py       # Type extraction utilities
 ├── mixins/        # Built-in reusable mixins
 └── utils/         # Internal utilities
@@ -195,7 +241,7 @@ src/schemap/
 
 - Open an issue for bugs or feature requests.
 - Pull requests should include tests.
-- Run `ruff check src/` before committing.
+- Run `uv run python -m pytest tests/ -v` before committing.
 
 ========================================================================
 PAGE: https://emiliano-gandini-outeda.me/schemap/examples/
@@ -246,7 +292,7 @@ def update_user(user_id: int, data: User.UpdateSchema, session: Session = Depend
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404)
-    for key, value in data.model_dump(exclude_none=True).items():
+    for key, value in data.model_dump(exclude_unset=True).items():
         setattr(user, key, value)
     session.commit()
     session.refresh(user)
@@ -271,7 +317,7 @@ class User(Base):
 
 Base.metadata.create_all(engine)
 
-# Same CRUD code — User.Schema, User.CreateSchema etc. all exist
+# Same CRUD code; User.Schema, User.CreateSchema etc. all exist
 ```
 
 Hide sensitive fields from API responses with `exclude_public`:
@@ -364,9 +410,9 @@ pip install schemap
 
 ## Quick start
 
-Schemap gives you three approaches — `AutoBase`, `SchemaMixin`, or `@auto_schema`. They all produce identical schemas.
+Schemap gives you three approaches (`AutoBase`, `SchemaMixin`, or `@auto_schema`). They all produce identical schemas.
 
-**AutoBase** — inherit from the ready-made base:
+**AutoBase**: inherit from the ready-made base. Best for new projects where you have no existing declarative base:
 
 ```python
 from schemap import AutoBase
@@ -380,7 +426,7 @@ class User(AutoBase):
     email: Mapped[str]
 ```
 
-**SchemaMixin** — mix into your own declarative base:
+**SchemaMixin**: mix into your own declarative base. Best when you already have a custom `DeclarativeBase` and want to keep it:
 
 ```python
 from schemap import SchemaMixin
@@ -396,7 +442,7 @@ class User(Base):
     email: Mapped[str]
 ```
 
-**@auto_schema** — decorate any existing model:
+**@auto_schema**: decorate any existing model. Best when you cannot change the model's base class (third-party models, large codebases):
 
 ```python
 from schemap import auto_schema
@@ -426,8 +472,11 @@ User.PublicSchema   # Excludes sensitive fields
 
 - One model definition, four schemas generated automatically.
 - Three approaches: `AutoBase`, `SchemaMixin`, or `@auto_schema` decorator.
-- SchemaConfig for field exclusion, type overrides, and custom validators.
+- `SchemaConfig` for field exclusion, type overrides, and custom validators.
+- `SchemaType` enum for type-safe schema variant selection.
+- `Status` enum for status fields with `StatusMixin`.
 - Timestamp, soft delete, audit, status, archivable, and versioning mixins included.
+- PEP 561 `py.typed` marker for full IDE and type checker support.
 
 ========================================================================
 PAGE: https://emiliano-gandini-outeda.me/schemap/mixins/
@@ -491,21 +540,22 @@ class Document(AutoBase, CreatedByMixin, UpdatedByMixin):
 
 ## StatusMixin
 
-Adds `status` column with `activate()` and `deactivate()` methods.
+Adds `status` column with `activate()` and `deactivate()` methods. Uses the `Status` enum for values.
 
 ```python
-from schemap import StatusMixin, AutoBase
+from schemap import StatusMixin, Status, AutoBase
 
 class Subscription(AutoBase, StatusMixin):
     __tablename__ = "subscriptions"
     id: Mapped[int] = mapped_column(primary_key=True)
     plan: Mapped[str]
 
-sub.activate()   # status = "active"
-sub.deactivate() # status = "inactive"
+sub.activate()   # status = Status.ACTIVE
+sub.deactivate() # status = Status.INACTIVE
+sub.status       # Status.ACTIVE (a str enum, compares with "active")
 ```
 
-Default status is `"active"`.
+Default status is `Status.ACTIVE`.
 
 ## ArchivableMixin
 
@@ -589,7 +639,7 @@ PAGE: https://emiliano-gandini-outeda.me/schemap/tutorial/
 
 Schemap supports three approaches. All three produce identical schemas. Pick the one that fits your project.
 
-**AutoBase** — inherit from the ready-made declarative base:
+**AutoBase**: inherit from the ready-made declarative base. Best for new projects where you have no existing base:
 
 ```python
 from schemap import AutoBase
@@ -603,7 +653,7 @@ class Product(AutoBase):
     price: Mapped[float] = mapped_column(nullable=True)
 ```
 
-**SchemaMixin** — use with an existing custom declarative base:
+**SchemaMixin**: mix into your own declarative base. Best when you already have a custom `DeclarativeBase` and want to keep it:
 
 ```python
 from schemap import SchemaMixin
@@ -618,10 +668,10 @@ class Product(Base):
     title: Mapped[str]
 ```
 
-**@auto_schema** — decorate any model without changing its base class:
+**@auto_schema**: decorate any model without changing its base class. Best when you cannot change the model's base (third-party models, large codebases):
 
 ```python
-from schemap import auto_schema
+from schemap import auto_schema, SchemaConfig
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 class Base(DeclarativeBase):
@@ -637,16 +687,6 @@ class Product(Base):
 @auto_schema(config=SchemaConfig(exclude_public=["price"]))
 class Product(Base):
     ...
-```
-
-## State of .gitignore
-
-Make sure `.gitignore` excludes `site/` (the zensical build output) alongside the usual Python entries:
-
-```
-site/
-__pycache__/
-*.pyc
 ```
 
 ## Schema variants
@@ -691,14 +731,17 @@ class User(AutoBase):
 
 ### SchemaConfig options
 
-- `exclude_always: list[str]` -- Excluded from all schemas.
-- `exclude_create: list[str]` -- Excluded from CreateSchema only.
-- `exclude_update: list[str]` -- Excluded from UpdateSchema only.
-- `exclude_public: list[str]` -- Excluded from PublicSchema only.
-- `field_overrides: dict[str, Any]` -- Override a field's Python type.
-- `required_always: list[str]` -- Force fields to be required.
-- `optional_always: list[str]` -- Force fields to be optional.
-- `extra_validators: dict[str, Callable]` -- Custom validators per field.
+- `exclude_always: list[str]`: excluded from all schemas.
+- `exclude_create: list[str]`: excluded from CreateSchema only.
+- `exclude_update: list[str]`: excluded from UpdateSchema only.
+- `exclude_public: list[str]`: excluded from PublicSchema only.
+- `field_overrides: dict[str, Any]`: override a field's Python type.
+- `required_always: list[str]`: force fields to be required.
+- `optional_always: list[str]`: force fields to be optional.
+- `extra_validators: dict[str, Callable]`: custom validators per field.
+- `public_exclude_prefix: tuple[str, ...]`: prefixes excluded from PublicSchema (default: `("__",)`).
+
+Raises `ValueError` if a field appears in both `required_always` and `optional_always`, or if config references unknown column names.
 
 ### Custom validators
 
