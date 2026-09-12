@@ -12,7 +12,7 @@ uv sync
 ## Running tests
 
 ```bash
-uv run pytest
+uv run python -m pytest tests/ -v
 ```
 
 Tests use SQLite in-memory databases. No external database needed.
@@ -32,10 +32,10 @@ Output goes to `site/`. Add `site/` to your `.gitignore`.
 src/schemap/
 ├── __init__.py    # Public API exports
 ├── base.py        # AutoBase, SchemaMixin
-├── builder.py     # build_schema()
+├── builder.py     # build_schema(), SchemaType
 ├── config.py      # SchemaConfig dataclass
 ├── decorator.py   # @auto_schema decorator
-├── methods.py     # from_schema / to_schema helpers
+├── py.typed       # PEP 561 type marker
 ├── types.py       # Type extraction utilities
 ├── mixins/        # Built-in reusable mixins
 └── utils/         # Internal utilities
@@ -45,4 +45,4 @@ src/schemap/
 
 - Open an issue for bugs or feature requests.
 - Pull requests should include tests.
-- Run `ruff check src/` before committing.
+- Run `uv run python -m pytest tests/ -v` before committing.
