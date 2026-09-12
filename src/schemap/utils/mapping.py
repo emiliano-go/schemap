@@ -1,6 +1,7 @@
 from sqlalchemy import types as sa_types
 from datetime import date, time, datetime
 from decimal import Decimal
+from typing import Any
 import uuid
 
 TYPE_MAP = {
@@ -43,11 +44,13 @@ TYPE_MAP = {
     sa_types.BINARY: bytes,
     sa_types.VARBINARY: bytes,
 
-    # --- JSON ---
-    sa_types.JSON: dict,
+    # --- JSON (can be any JSON-serializable value) ---
+    sa_types.JSON: Any,
 
     # --- UUID ---
     sa_types.UUID: uuid.UUID,
+
+    # --- Enum: handled specially in extract_python_type ---
 
     # --- Arrays ---
     sa_types.ARRAY: list,
