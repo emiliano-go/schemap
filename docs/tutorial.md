@@ -4,7 +4,7 @@
 
 Schemap supports three approaches. All three produce identical schemas. Pick the one that fits your project.
 
-**AutoBase** — inherit from the ready-made declarative base:
+**AutoBase**: inherit from the ready-made declarative base:
 
 ```python
 from schemap import AutoBase
@@ -18,7 +18,7 @@ class Product(AutoBase):
     price: Mapped[float] = mapped_column(nullable=True)
 ```
 
-**SchemaMixin** — use with an existing custom declarative base:
+**SchemaMixin**: use with an existing custom declarative base:
 
 ```python
 from schemap import SchemaMixin
@@ -33,7 +33,7 @@ class Product(Base):
     title: Mapped[str]
 ```
 
-**@auto_schema** — decorate any model without changing its base class:
+**@auto_schema**: decorate any model without changing its base class:
 
 ```python
 from schemap import auto_schema
@@ -52,16 +52,6 @@ class Product(Base):
 @auto_schema(config=SchemaConfig(exclude_public=["price"]))
 class Product(Base):
     ...
-```
-
-## State of .gitignore
-
-Make sure `.gitignore` excludes `site/` (the zensical build output) alongside the usual Python entries:
-
-```
-site/
-__pycache__/
-*.pyc
 ```
 
 ## Schema variants
@@ -106,14 +96,14 @@ class User(AutoBase):
 
 ### SchemaConfig options
 
-- `exclude_always: list[str]` -- Excluded from all schemas.
-- `exclude_create: list[str]` -- Excluded from CreateSchema only.
-- `exclude_update: list[str]` -- Excluded from UpdateSchema only.
-- `exclude_public: list[str]` -- Excluded from PublicSchema only.
-- `field_overrides: dict[str, Any]` -- Override a field's Python type.
-- `required_always: list[str]` -- Force fields to be required.
-- `optional_always: list[str]` -- Force fields to be optional.
-- `extra_validators: dict[str, Callable]` -- Custom validators per field.
+- `exclude_always: list[str]`: excluded from all schemas.
+- `exclude_create: list[str]`: excluded from CreateSchema only.
+- `exclude_update: list[str]`: excluded from UpdateSchema only.
+- `exclude_public: list[str]`: excluded from PublicSchema only.
+- `field_overrides: dict[str, Any]`: override a field's Python type.
+- `required_always: list[str]`: force fields to be required.
+- `optional_always: list[str]`: force fields to be optional.
+- `extra_validators: dict[str, Callable]`: custom validators per field.
 
 ### Custom validators
 
