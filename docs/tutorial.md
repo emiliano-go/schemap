@@ -36,7 +36,7 @@ class Product(Base):
 **@auto_schema**: decorate any model without changing its base class:
 
 ```python
-from schemap import auto_schema
+from schemap import auto_schema, SchemaConfig
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 class Base(DeclarativeBase):
@@ -104,6 +104,9 @@ class User(AutoBase):
 - `required_always: list[str]`: force fields to be required.
 - `optional_always: list[str]`: force fields to be optional.
 - `extra_validators: dict[str, Callable]`: custom validators per field.
+- `public_exclude_prefix: tuple[str, ...]`: prefixes excluded from PublicSchema (default: `("__",)`).
+
+Raises `ValueError` if a field appears in both `required_always` and `optional_always`, or if config references unknown column names.
 
 ### Custom validators
 
