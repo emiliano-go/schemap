@@ -5,11 +5,11 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, Any
 
 import pytest
 from pydantic import ValidationError
-from sqlalchemy import String, Text, JSON, Float, DateTime, Date, Boolean, Numeric, UUID as SA_UUID
+from sqlalchemy import String, Text, JSON, Float, DateTime, Date, Boolean, Numeric, UUID as SA_UUID, Enum as SAEnum
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from schemap import auto_schema, SchemaConfig
@@ -163,7 +163,7 @@ def test_all_types_have_correct_annotations():
     assert fields["date_col"].annotation is date
     assert fields["datetime_col"].annotation is datetime
     assert fields["text_col"].annotation is str
-    assert fields["json_col"].annotation is dict
+    assert fields["json_col"].annotation is Any
     assert fields["uuid_col"].annotation is uuid.UUID
     assert fields["name_50"].annotation is str
 
@@ -482,3 +482,216 @@ class StrictModel(Base):
 def test_validation_error_on_wrong_type():
     with pytest.raises(ValidationError):
         StrictModel.Schema(id=1, age="not_a_number")
+
+
+# ===================================================================
+# 16. BUGFIX: from_schema preserves explicit None values
+# ===================================================================
+
+@auto_schema
+class NonePreserve(Base):
+    __tablename__ = "decorator_none_preserve"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    bio: Mapped[Optional[str]] = mapped_column(nullable=True)
+
+
+def test_from_schema_preserves_explicit_none():
+    """from_schema should not drop fields set to None."""
+    data = NonePreserve.CreateSchema(name="alice", bio=None)
+    user = NonePreserve.from_schema(data)
+    assert user.name == "alice"
+    assert user.bio is None
+
+
+def test_from_schema_drops_unset_fields():
+    """from_schema should drop fields not provided in the schema."""
+    data = NonePreserve.CreateSchema(name="bob")
+    user = NonePreserve.from_schema(data)
+    assert user.name == "bob"
+    assert user.bio is None
+
+
+# ===================================================================
+# 17. EDGE CASE: Empty create/update schemas (PK-only model)
+# ===================================================================
+
+@auto_schema
+class EdgePkOnly(Base):
+    __tablename__ = "decorator_edge_pk_only"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+
+def test_pk_only_create_is_empty():
+    """CreateSchema for PK-only model should have zero fields."""
+    assert len(EdgePkOnly.CreateSchema.model_fields) == 0
+
+
+def test_pk_only_update_is_empty():
+    """UpdateSchema for PK-only model should have zero fields."""
+    assert len(EdgePkOnly.UpdateSchema.model_fields) == 0
+
+
+def test_pk_only_full_has_pk():
+    """Full schema should still have the PK."""
+    assert "id" in EdgePkOnly.Schema.model_fields
+
+
+# ===================================================================
+# 18. EDGE CASE: from_schema with UpdateSchema (no PK)
+# ===================================================================
+
+@auto_schema
+class ForFromUpdate(Base):
+    __tablename__ = "decorator_from_update"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    age: Mapped[int]
+
+
+def test_from_schema_with_update_schema():
+    """from_schema with UpdateSchema should work (PK absent, ORM gets None)."""
+    data = ForFromUpdate.UpdateSchema(name="dave", age=30)
+    obj = ForFromUpdate.from_schema(data)
+    assert obj.name == "dave"
+    assert obj.age == 30
+    assert obj.id is None
+
+
+# ===================================================================
+# 19. EDGE CASE: should_include with unknown schema_type
+# ===================================================================
+
+def test_unknown_schema_type_raises():
+    """build_schema with unknown schema_type should raise ValueError."""
+    from schemap.builder import build_schema
+    with pytest.raises(ValueError, match="Unknown schema_type"):
+        build_schema(ForFromUpdate, "bogus")
+
+
+# ===================================================================
+# 20. EDGE CASE: SchemaConfig with no config (standalone build_schema)
+# ===================================================================
+
+def test_build_schema_no_config():
+    """build_schema without config should work with all schema types."""
+    from schemap.builder import build_schema
+
+    s = build_schema(ForFromUpdate, "full")
+    assert "name" in s.model_fields
+
+    s = build_schema(ForFromUpdate, "create")
+    assert "id" not in s.model_fields
+
+    s = build_schema(ForFromUpdate, "update")
+    for f in s.model_fields.values():
+        assert f.default is None
+
+    s = build_schema(ForFromUpdate, "public")
+    assert "name" in s.model_fields
+
+
+# ===================================================================
+# 21. HARDENING: Callable defaults use default_factory
+# ===================================================================
+
+@auto_schema
+class WithCallableDefault(Base):
+    __tablename__ = "decorator_callable_default"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    seq_num: Mapped[int] = mapped_column(default=lambda: 42)
+
+
+def test_callable_default_not_stored_as_function():
+    """Callable default should be invoked, not stored as a function object."""
+    field = WithCallableDefault.Schema.model_fields["seq_num"]
+    # Pydantic stores callable defaults in default_factory, not default
+    assert field.default_factory is not None
+    assert field.default_factory() == 42
+
+
+def test_callable_default_excluded_from_create():
+    """Columns with callable defaults should be excluded from CreateSchema."""
+    assert "seq_num" not in WithCallableDefault.CreateSchema.model_fields
+
+
+def test_callable_default_in_full_schema():
+    """Columns with callable defaults should be included in full Schema."""
+    assert "seq_num" in WithCallableDefault.Schema.model_fields
+
+
+# ===================================================================
+# 22. HARDENING: JSON columns accept any type
+# ===================================================================
+
+@auto_schema
+class WithJson(Base):
+    __tablename__ = "decorator_json"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    data: Mapped[dict] = mapped_column(JSON)
+
+
+def test_json_field_allows_lists():
+    """JSON field should accept lists, not just dicts."""
+    from typing import Any
+    field = WithJson.Schema.model_fields["data"]
+    # Should be typed as Any, not dict
+    assert field.annotation is Any
+
+
+# ===================================================================
+# 23. HARDENING: from_schema accepts dicts
+# ===================================================================
+
+def test_from_schema_accepts_dict():
+    """from_schema should accept a plain dict."""
+    user = ForFromUpdate.from_schema({"name": "eve", "age": 25})
+    assert user.name == "eve"
+    assert user.age == 25
+
+
+def test_from_schema_dict_drops_unset():
+    """from_schema with dict should drop fields not in the dict."""
+    user = ForFromUpdate.from_schema({"name": "frank"})
+    assert user.name == "frank"
+    assert user.id is None
+    assert user.age is None
+
+
+# ===================================================================
+# 24. HARDENING: Enum columns work end-to-end
+# ===================================================================
+
+import enum
+
+class Mood(enum.Enum):
+    HAPPY = "happy"
+    SAD = "sad"
+
+
+@auto_schema
+class WithEnum(Base):
+    __tablename__ = "decorator_enum"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    mood: Mapped[Mood] = mapped_column(SAEnum(Mood))
+
+
+def test_enum_field_uses_concrete_class():
+    """Enum field should be typed as the concrete enum, not abstract enum.Enum."""
+    field = WithEnum.Schema.model_fields["mood"]
+    assert field.annotation is Mood
+
+
+def test_enum_field_validates():
+    """Enum field should validate enum members."""
+    schema = WithEnum.Schema(id=1, mood=Mood.HAPPY)
+    assert schema.mood is Mood.HAPPY
+
+    with pytest.raises(ValidationError):
+        WithEnum.Schema(id=1, mood="invalid")
