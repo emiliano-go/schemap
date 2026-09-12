@@ -35,17 +35,17 @@ Mixin that adds four schema class properties and two conversion methods.
 
 **Class properties:**
 
-- `Schema` -- Full schema with all columns.
-- `CreateSchema` -- Excludes PKs, server_defaults, defaults.
-- `UpdateSchema` -- All fields Optional with None default.
-- `PublicSchema` -- Excludes `__`-prefixed columns.
+- `Schema`: full schema with all columns.
+- `CreateSchema`: excludes PKs, server_defaults, defaults.
+- `UpdateSchema`: all fields Optional with None default.
+- `PublicSchema`: excludes `__`-prefixed columns.
 
 Schemas are cached per class via `cached_classproperty`.
 
 **Methods:**
 
-- `from_schema(cls, schema_obj)` -- Create ORM instance from Pydantic schema. Uses `model_dump(exclude_none=True)`.
-- `to_schema(self, schema_cls=None)` -- Convert ORM instance to schema. Defaults to `.Schema`.
+- `from_schema(cls, schema_obj)`: create ORM instance from Pydantic schema. Uses `model_dump(exclude_unset=True)`.
+- `to_schema(self, schema_cls=None)`: convert ORM instance to schema. Defaults to `.Schema`.
 
 **Configuration:**
 
@@ -68,7 +68,7 @@ def auto_schema(
 ```python
 from schemap import auto_schema, SchemaConfig
 
-# Bare decorator — all defaults
+# Bare decorator, all defaults
 @auto_schema
 class User(Base):
     __tablename__ = "users"
@@ -96,25 +96,26 @@ Dataclass for per-model schema customization. All fields are optional.
 - `required_always: list[str] = []`
 - `optional_always: list[str] = []`
 - `extra_validators: dict[str, Callable] = {}`
+- `public_exclude_prefix: tuple[str, ...] = ("__",)`
 
 ## build_schema
 
 ```python
 def build_schema(
     model: type[DeclarativeBase],
-    schema_type: str = "default",
+    schema_type: Literal["full", "create", "update", "public"] = "full",
     config: SchemaConfig | None = None,
 ) -> type[BaseModel]
 ```
 
 Build a Pydantic schema class for any SQLAlchemy model without using `AutoBase`.
 
-**schema_type values:** `"default"`, `"full"`, `"create"`, `"update"`, `"public"`.
+**schema_type values:** `"full"`, `"create"`, `"update"`, `"public"`.
 
 ```python
 from schemap import build_schema, SchemaConfig
 
-UserSchema = build_schema(User, "default")
+UserSchema = build_schema(User, "full")
 UserCreateSchema = build_schema(User, "create", config=SchemaConfig(exclude_create=["internal_id"]))
 ```
 
@@ -133,4 +134,5 @@ UserCreateSchema = build_schema(User, "create", config=SchemaConfig(exclude_crea
 | `LargeBinary`, `BLOB` | `bytes` |
 | `JSON` | `dict` |
 | `UUID` | `uuid.UUID` |
+| `Enum` | `enum.Enum` |
 | `ARRAY` | `list` |
