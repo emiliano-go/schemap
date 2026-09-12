@@ -43,7 +43,7 @@ def update_user(user_id: int, data: User.UpdateSchema, session: Session = Depend
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404)
-    for key, value in data.model_dump(exclude_none=True).items():
+    for key, value in data.model_dump(exclude_unset=True).items():
         setattr(user, key, value)
     session.commit()
     session.refresh(user)
@@ -68,7 +68,7 @@ class User(Base):
 
 Base.metadata.create_all(engine)
 
-# Same CRUD code — User.Schema, User.CreateSchema etc. all exist
+# Same CRUD code; User.Schema, User.CreateSchema etc. all exist
 ```
 
 Hide sensitive fields from API responses with `exclude_public`:
