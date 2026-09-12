@@ -81,7 +81,9 @@ name = "schemap on PyPI"
   title_template = "{title} - schemap",
   publisher_name = "Emiliano Gandini Outeda",
   locale = "en_US",
+  twitter_site = "@emiliano_go",
   auto_generate_schema = true,
+  emit_warnings = true,
 }
 
 [project.markdown_extensions.tables]
