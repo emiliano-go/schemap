@@ -37,7 +37,7 @@ The library reads your SQLAlchemy columns and translates them into Pydantic fiel
 No other library auto-generates full, create, update, and public schemas with intelligent exclusion rules out of the box. Primary keys are excluded from create. All fields become optional in update. Private fields are filtered from public. These rules are not something you configure; they are built in.
 
 **2. Strict separation between ORM and validation.**
-SQLAlchemy stays pure SQLAlchemy. Pydantic stays Pydantic. Schemap never fuses them into a single class, unlike SQLModel. Your ORM models remain unaware of your API layer. You can swap Pydantic versions, switch validation libraries, or use your models outside of FastAPI without touching a single column definition.
+SQLAlchemy stays pure SQLAlchemy. Pydantic stays Pydantic. Schemap never fuses them into a single class. Your ORM models remain unaware of your API layer. You can swap Pydantic versions, switch validation libraries, or use your models outside of FastAPI without touching a single column definition.
 
 **3. Three API modes.**
 Use `AutoBase` inheritance for new projects. Use `@auto_schema` to decorate existing models without changing their base class. Use `build_schema` standalone when you need a schema without modifying the model at all. All three produce identical results.
