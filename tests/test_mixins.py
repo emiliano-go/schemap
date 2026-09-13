@@ -3,7 +3,7 @@
 import uuid
 import pytest
 from datetime import datetime, timezone
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, String
 from sqlalchemy.orm import Session, Mapped, mapped_column
 
 from schemap.base import AutoBase
