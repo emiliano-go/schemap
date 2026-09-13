@@ -290,3 +290,107 @@ def test_required_and_optional_conflict():
             required_always=["email"],
             optional_always=["email"],
         )
+
+
+# ===================================================================
+# Config edge cases: empty prefix, overrides, combined options
+# ===================================================================
+
+def test_empty_public_exclude_prefix():
+    """Empty tuple disables prefix-based exclusion."""
+    class NoPrefix(AutoBase):
+        __tablename__ = "config_no_prefix"
+        __schema_config__ = SchemaConfig(public_exclude_prefix=())
+        id: Mapped[int] = mapped_column(primary_key=True)
+        secret_field: Mapped[str] = mapped_column()
+
+    # secret_field should NOT be excluded since prefix is empty
+    assert "secret_field" in NoPrefix.PublicSchema.model_fields
+
+
+def test_exclude_always_with_validator():
+    """Validator on an excluded field should be harmless (never called)."""
+    call_count = 0
+
+    def tracking_validator(v):
+        nonlocal call_count
+        call_count += 1
+        return v
+
+    class ExcludedWithValidator(AutoBase):
+        __tablename__ = "config_excluded_validator"
+        __schema_config__ = SchemaConfig(
+            exclude_always=["secret"],
+            extra_validators={"secret": tracking_validator},
+        )
+        id: Mapped[int] = mapped_column(primary_key=True)
+        secret: Mapped[str]
+
+    # secret is excluded from all schemas, validator should never fire
+    assert "secret" not in ExcludedWithValidator.Schema.model_fields
+    assert "secret" not in ExcludedWithValidator.CreateSchema.model_fields
+    assert "secret" not in ExcludedWithValidator.UpdateSchema.model_fields
+    assert "secret" not in ExcludedWithValidator.PublicSchema.model_fields
+    assert call_count == 0
+
+
+def test_multiple_public_exclude_prefixes():
+    """Multiple prefixes in public_exclude_prefix should all work."""
+    class MultiPrefix(AutoBase):
+        __tablename__ = "config_multi_prefix"
+        __schema_config__ = SchemaConfig(
+            public_exclude_prefix=("_", "internal_"),
+        )
+        id: Mapped[int] = mapped_column(primary_key=True)
+        name: Mapped[str]
+        _secret: Mapped[str] = mapped_column()
+        internal_flag: Mapped[bool] = mapped_column()
+
+    public_fields = set(MultiPrefix.PublicSchema.model_fields.keys())
+    assert "_secret" not in public_fields
+    assert "internal_flag" not in public_fields
+    assert "name" in public_fields
+    assert "id" in public_fields
+
+
+# ===================================================================
+# Polymorphic exclude
+# ===================================================================
+
+def test_polymorphic_exclude():
+    """polymorphic_exclude=True should exclude the discriminator column."""
+    from sqlalchemy import String as SAString
+
+    class Animal(AutoBase):
+        __tablename__ = "config_animals"
+        __schema_config__ = SchemaConfig(polymorphic_exclude=True)
+        id: Mapped[int] = mapped_column(primary_key=True)
+        name: Mapped[str]
+        type: Mapped[str] = mapped_column(SAString(50))
+        __mapper_args__ = {"polymorphic_on": "type", "polymorphic_identity": "animal"}
+
+    # type column should be excluded from all schemas
+    assert "type" not in Animal.Schema.model_fields
+    assert "type" not in Animal.CreateSchema.model_fields
+    assert "type" not in Animal.UpdateSchema.model_fields
+    assert "type" not in Animal.PublicSchema.model_fields
+    # other fields should still be present
+    assert "id" in Animal.Schema.model_fields
+    assert "name" in Animal.Schema.model_fields
+
+
+def test_polymorphic_exclude_false_includes_discriminator():
+    """polymorphic_exclude=False (default) should include the discriminator."""
+    from sqlalchemy import String as SAString
+
+    class Device(AutoBase):
+        __tablename__ = "config_devices"
+        __schema_config__ = SchemaConfig(polymorphic_exclude=False)
+        id: Mapped[int] = mapped_column(primary_key=True)
+        name: Mapped[str]
+        kind: Mapped[str] = mapped_column(SAString(50))
+        __mapper_args__ = {"polymorphic_on": "kind", "polymorphic_identity": "device"}
+
+    # kind column should be included (default behavior)
+    assert "kind" in Device.Schema.model_fields
+    assert "kind" in Device.CreateSchema.model_fields
