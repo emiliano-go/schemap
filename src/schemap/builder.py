@@ -9,7 +9,7 @@ from pydantic import BaseModel, create_model, ConfigDict, field_validator
 
 from .config import SchemaConfig
 from .types import extract_column_metadata
-from .utils.schema import should_include, transform_for_schema
+from .utils.schema import should_include, transform_for_schema, _get_mapped_keys
 
 _mappers_configured = False
 
@@ -72,6 +72,7 @@ def build_schema(
     except NoInspectionAvailable:
         if not _mappers_configured:
             configure_mappers()
+            _get_mapped_keys.cache_clear()
             _mappers_configured = True
         try:
             inspector = inspect(model)
@@ -83,9 +84,18 @@ def build_schema(
     columns_meta = []
     actual_names: set[str] = set()
 
+    # Detect polymorphic discriminator column
+    polymorphic_on_key = None
+    mapper = inspector.mapper
+    if mapper.polymorphic_on is not None:
+        polymorphic_on_key = mapper.polymorphic_on.key
+
     for col in inspector.columns:
         meta = extract_column_metadata(col)
         actual_names.add(meta["name"])
+        if polymorphic_on_key and meta["name"] == polymorphic_on_key:
+            if config is not None and config.polymorphic_exclude:
+                meta["polymorphic_on"] = True
         if should_include(schema_type, meta, config):
             columns_meta.append(meta)
 
@@ -98,7 +108,13 @@ def build_schema(
         field_type, field_kwargs = transform_for_schema(col_meta, schema_type, config)
         fields[col_meta["name"]] = (field_type, field_kwargs)
 
-    schema_name = f"{model.__name__}{schema_type.capitalize()}Schema"
+    # Sanitize class name: strip "<locals>" segments from __qualname__
+    # to produce valid schema names like "ClassNameFullSchema"
+    class_name = model.__qualname__
+    if "<locals>" in class_name:
+        class_name = model.__name__
+
+    schema_name = f"{class_name}{schema_type.capitalize()}Schema"
 
     validators = {}
     if config and config.extra_validators:
