@@ -129,6 +129,17 @@ class SchemaConfig:
         SchemaConfig(public_exclude_prefix=("_secret", "__"))
     """
 
+    polymorphic_exclude: bool = False
+    """If True, exclude the polymorphic_on discriminator column from all schemas.
+
+    Useful for single-table or joined-table inheritance where the
+    discriminator column (e.g., ``type``) should not appear in API schemas.
+
+    Example::
+
+        SchemaConfig(polymorphic_exclude=True)
+    """
+
     def __post_init__(self) -> None:
         conflict = set(self.required_always) & set(self.optional_always)
         if conflict:
