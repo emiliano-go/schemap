@@ -695,3 +695,134 @@ def test_enum_field_validates():
 
     with pytest.raises(ValidationError):
         WithEnum.Schema(id=1, mood="invalid")
+
+
+# ===================================================================
+# 25. GAP: from_schema dict ignores unknown keys
+# ===================================================================
+
+def test_from_schema_dict_ignores_unknown_keys():
+    """from_schema with dict should silently ignore keys not in the model."""
+    user = ForFromUpdate.from_schema({"name": "x", "unknown_key": 123, "another": True})
+    assert user.name == "x"
+    assert not hasattr(user, "unknown_key")
+    assert not hasattr(user, "another")
+
+
+# ===================================================================
+# 26. GAP: Composite primary key
+# ===================================================================
+
+from sqlalchemy import ForeignKey as SA_FK
+
+@auto_schema
+class CompositePK(Base):
+    __tablename__ = "decorator_composite_pk"
+
+    tenant_id: Mapped[int] = mapped_column(primary_key=True)
+    item_id: Mapped[int] = mapped_column(primary_key=True)
+    value: Mapped[str]
+
+
+def test_composite_pk_full_schema_has_both():
+    """Full schema should include both PK columns."""
+    fields = CompositePK.Schema.model_fields
+    assert "tenant_id" in fields
+    assert "item_id" in fields
+    assert "value" in fields
+
+
+def test_composite_pk_create_excludes_both():
+    """CreateSchema should exclude both PK columns."""
+    fields = CompositePK.CreateSchema.model_fields
+    assert "tenant_id" not in fields
+    assert "item_id" not in fields
+    assert "value" in fields
+
+
+def test_composite_pk_update_excludes_both():
+    """UpdateSchema should exclude both PK columns."""
+    fields = CompositePK.UpdateSchema.model_fields
+    assert "tenant_id" not in fields
+    assert "item_id" not in fields
+    assert "value" in fields
+
+
+def test_composite_pk_round_trip():
+    """Round-trip with composite PK should preserve both keys."""
+    obj = CompositePK(tenant_id=1, item_id=42, value="hello")
+    schema = obj.to_schema()
+    rehydrated = CompositePK.from_schema(schema)
+    assert rehydrated.tenant_id == 1
+    assert rehydrated.item_id == 42
+    assert rehydrated.value == "hello"
+
+
+# ===================================================================
+# 27. GAP: Mixin fields with __schema_config__
+# ===================================================================
+
+@auto_schema(config=SchemaConfig(exclude_create=["created_at"]))
+class WithMixinAndConfig(Base, TimestampMixin):
+    __tablename__ = "decorator_mixin_config"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str]
+
+
+def test_mixin_field_excluded_by_config():
+    """Config should be able to exclude mixin-provided fields."""
+    assert "created_at" not in WithMixinAndConfig.CreateSchema.model_fields
+    assert "created_at" in WithMixinAndConfig.Schema.model_fields
+
+
+# ===================================================================
+# 28. GAP: Required + override on same field
+# ===================================================================
+
+@auto_schema(config=SchemaConfig(
+    required_always=["email"],
+    field_overrides={"email": str},
+))
+class RequiredWithOverride(Base):
+    __tablename__ = "decorator_required_override"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str]
+
+
+def test_required_with_override():
+    """required_always + field_overrides on same field should work."""
+    field = RequiredWithOverride.Schema.model_fields["email"]
+    assert field.is_required()
+    assert field.annotation is str
+
+
+# ===================================================================
+# 29. GAP: VersionMixin excluded from CreateSchema
+# ===================================================================
+
+from schemap.mixins import VersionMixin
+
+@auto_schema
+class VersionedModel(Base, VersionMixin):
+    __tablename__ = "decorator_versioned"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+
+
+def test_version_excluded_from_create():
+    """VersionMixin.version (default=1) should be excluded from CreateSchema."""
+    assert "version" not in VersionedModel.CreateSchema.model_fields
+
+
+def test_version_in_full_schema():
+    """VersionMixin.version should be in full Schema."""
+    assert "version" in VersionedModel.Schema.model_fields
+
+
+def test_version_default_in_schema():
+    """VersionMixin.version should have default=1 in full Schema."""
+    field = VersionedModel.Schema.model_fields["version"]
+    assert field.default == 1
