@@ -1,20 +1,26 @@
 from typing import Any, Optional
+from functools import lru_cache
 
 from pydantic import BaseModel, Field
 from sqlalchemy import inspect
 
 from ..config import SchemaConfig
 
-_mapped_keys_cache: dict[type, set[str]] = {}
+
+@lru_cache(maxsize=None)
+def _get_mapped_keys(cls: type) -> set[str]:
+    """Get the set of mapped column keys for a class (cached)."""
+    return frozenset(c.key for c in inspect(cls).columns)
 
 
 def from_schema(cls: type, schema_obj: BaseModel | dict[str, Any]) -> Any:
-    """Create an ORM instance from a Pydantic schema or dict."""
+    """Create an ORM instance from a Pydantic schema or dict.
+
+    Ellipsis values (``...``) in dicts are treated as "unset" and silently
+    dropped, allowing callers to distinguish between ``None`` and "not provided".
+    """
     if isinstance(schema_obj, dict):
-        mapped = _mapped_keys_cache.get(cls)
-        if mapped is None:
-            mapped = {c.key for c in inspect(cls).columns}
-            _mapped_keys_cache[cls] = mapped
+        mapped = _get_mapped_keys(cls)
         data = {k: v for k, v in schema_obj.items() if k in mapped and v is not ...}
         return cls(**data)
     return cls(**schema_obj.model_dump(exclude_unset=True))
@@ -25,6 +31,8 @@ def should_include(schema_type: str, metadata: dict[str, Any], config: SchemaCon
 
     if config is not None:
         if metadata["name"] in config.exclude_always:
+            return False
+        if config.polymorphic_exclude and metadata.get("polymorphic_on"):
             return False
         if schema_type == "public" and metadata["name"] in config.exclude_public:
             return False
