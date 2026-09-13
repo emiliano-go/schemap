@@ -7,7 +7,7 @@ from sqlalchemy.schema import ForeignKey
 
 
 class CreatedByMixin:
-    """Adds ``created_by_id`` FK and ``created_by`` relationship.
+    """Adds ``created_by_id`` FK column.
 
     By default, the FK points to the ``users`` table. Override
     ``user_table`` on subclasses to use a different table.
@@ -24,6 +24,12 @@ class CreatedByMixin:
             __tablename__ = "articles"
             user_table = "authors"
             ...
+
+    Note:
+        This mixin only provides the FK column. To add a ``created_by``
+        relationship, define it on your model::
+
+            created_by: Mapped[Optional[User]] = relationship()
     """
 
     user_table: str = "users"
@@ -32,13 +38,9 @@ class CreatedByMixin:
     def created_by_id(cls) -> Mapped[Optional[int]]:
         return mapped_column(ForeignKey(f"{cls.user_table}.id"))
 
-    @declared_attr
-    def created_by(cls) -> Mapped[Optional["DeclarativeBase"]]:
-        return relationship()
-
 
 class UpdatedByMixin:
-    """Adds ``updated_by_id`` FK and ``updated_by`` relationship.
+    """Adds ``updated_by_id`` FK column.
 
     By default, the FK points to the ``users`` table. Override
     ``user_table`` on subclasses to use a different table.
@@ -55,6 +57,12 @@ class UpdatedByMixin:
             __tablename__ = "articles"
             user_table = "authors"
             ...
+
+    Note:
+        This mixin only provides the FK column. To add an ``updated_by``
+        relationship, define it on your model::
+
+            updated_by: Mapped[Optional[User]] = relationship()
     """
 
     user_table: str = "users"
@@ -62,7 +70,3 @@ class UpdatedByMixin:
     @declared_attr
     def updated_by_id(cls) -> Mapped[Optional[int]]:
         return mapped_column(ForeignKey(f"{cls.user_table}.id"))
-
-    @declared_attr
-    def updated_by(cls) -> Mapped[Optional["DeclarativeBase"]]:
-        return relationship()
