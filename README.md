@@ -13,6 +13,9 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-10AC84?style=for-the-badge" alt="License">
   </a>
+  <a href="https://github.com/emiliano-go/schemap/actions/workflows/test.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/emiliano-go/schemap/test.yml?branch=master&style=for-the-badge&logo=github&label=Tests" alt="Tests">
+  </a>
   <a href="https://schemap.emiliano-go.com/">
     <img src="https://img.shields.io/badge/Docs-schemap.emiliano--go.com-4A90D9?style=for-the-badge" alt="Documentation">
   </a>
